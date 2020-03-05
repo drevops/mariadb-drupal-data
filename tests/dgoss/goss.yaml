@@ -1,0 +1,25 @@
+file:
+  /usr/bin/mysql:
+    exists: true
+    contains: []
+
+  /usr/bin/mysqld:
+    exists: true
+    contains: []
+
+  /var/lib/db-data:
+    exists: true
+    contains: []
+
+package:
+  mariadb:
+    installed: true
+    versions:
+      - 10.2.29-r0
+user:
+  mysql:
+    exists: true
+
+process:
+  mysqld:
+    running: true

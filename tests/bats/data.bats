@@ -117,3 +117,23 @@ copy_code(){
   assert_success
   assert_contains "mytesttable" "${output}"
 }
+
+@test "Seeding of the image works" {
+  step "Download fixture DB dump."
+  file="${BUILD_DIR}/db.sql"
+  CURL_DB_URL=https://raw.githubusercontent.com/wiki/drevops/drevops/db_d7.dist.sql.md
+  curl -L "${CURL_DB_URL}" -o "${file}"
+
+  step "Run DB seeding script"
+  run ./seed-db.sh "${file}" testorg/tesimage:latest
+  assert_success
+
+  step "Start container from the seeded image."
+  cid=$(docker run -d --rm "testorg/tesimage:latest")
+  substep "Waiting for the service to become ready."
+  docker exec -i "${cid}" sh -c "until nc -z localhost 3306; do sleep 1; echo -n .; done; echo"
+
+  step "Assert that data was captured into the new image."
+  run docker exec "${cid}" /usr/bin/mysql -e "show tables;" drupal
+  assert_output_contains "node"
+}

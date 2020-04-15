@@ -31,6 +31,12 @@ Drupal website with large database.
 When required, website developers restart docker stack locally with already 
 imported database, which saves significant amount of time for database imports.
 
+## Seeding image with your database
+`./seed-db.sh` allows to easily create your own image with "seeded" database.
+
+1. `./seed-db.sh path/to/db.sql myorg/myimage:latest`
+2. `docker push myorg/myimage:latest`
+
 ## Maintenance
 This image is built and pushed manually to DockerHub once parent image
 is updated.

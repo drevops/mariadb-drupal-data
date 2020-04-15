@@ -9,6 +9,9 @@ jobs:
     working_directory: /root/project
     steps:
       - checkout
+      - run:
+          name: Lint scripts
+          command: shellcheck seed-db.sh
       - setup_remote_docker
       - run:
           name: Install Docker

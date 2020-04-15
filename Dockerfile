@@ -7,7 +7,7 @@
 # support setting data directory as an environment variable) to support new
 # location and overriding default CMD to include our custom data directory.
 #
-FROM amazeeio/mariadb-drupal:v1.2.0
+FROM amazeeio/mariadb-drupal:v1.4.1
 
 ENV DATA_DIR=/var/lib/db-data
 

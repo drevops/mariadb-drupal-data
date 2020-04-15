@@ -15,7 +15,7 @@ package:
   mariadb:
     installed: true
     versions:
-      - 10.2.29-r0
+      - 10.2.31-r0
 user:
   mysql:
     exists: true

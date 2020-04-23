@@ -1,11 +1,11 @@
 # MariaDB Database data container
-Allows to capture data as a Docker layer.
+Allows capturing database data as a Docker layer.
 
 [![CircleCI](https://circleci.com/gh/drevops/mariadb-drupal-data.svg?style=svg)](https://circleci.com/gh/drevops/mariadb-drupal-data)
 
 ## How it works
 Usually, MariaDB uses data directory specified as a Docker volume that is
-mounted onto host: this allows to retain data after container restarts.
+mounted onto host: this allows retaining data after container restarts.
 
 The MariaDB image in this project uses custom location `/usr/lib/db-data` (not 
 a Docker volume) to store expanded database files. These files then can be
@@ -19,17 +19,18 @@ Technically, majority of the functionality is relying on upstream [`amazeeio/mar
 
 ## Use case
 
-Drupal website with large database.
+Drupal website with a large database.
 
 1. CI process builds a website overnight.
-2. CI process captures latest database as a new Docker layer in the database image.
+2. CI process captures the latest database as a new Docker layer in the database image.
 3. CI process tags and pushes image to the Docker registry.
-4. Website developers pull latest image from the registry and build site locally.
+4. Website developers pull the latest image from the registry and build site locally.
    OR
-   Subsequent CI builds pull latest image from the registry and build site. 
+   Subsequent CI builds pull the latest image from the registry and build site. 
 
-When required, website developers restart docker stack locally with already 
-imported database, which saves significant amount of time for database imports.
+When required, website developers restart docker stack locally with an already 
+imported database, which saves a significant amount of time for database 
+imports.
 
 ## Seeding image with your database
 `./seed-db.sh` allows to easily create your own image with "seeded" database.

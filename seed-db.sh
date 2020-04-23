@@ -36,7 +36,7 @@ docker exec -i "${cid}" sh -c "until nc -z localhost 3306; do sleep 1; echo -n .
 echo "==> Importing database from the file."
 cat "${DB_FILE}" | docker exec -i "${cid}" /usr/bin/mysql
 # Testing that the data was successfully imported.
-if docker exec "${cid}" /usr/bin/mysql -e "show tables;" | grep -q node; then
+if docker exec "${cid}" /usr/bin/mysql -e "show tables;" | grep -q users; then
   echo "==> Successfully imported data.";
 else
   echo "ERROR: failed to import data."

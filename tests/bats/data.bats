@@ -135,5 +135,5 @@ copy_code(){
 
   step "Assert that data was captured into the new image."
   run docker exec "${cid}" /usr/bin/mysql -e "show tables;" drupal
-  assert_output_contains "node"
+  assert_output_contains "users"
 }

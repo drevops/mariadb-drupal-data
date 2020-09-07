@@ -18,6 +18,9 @@ DST_IMAGE="${DST_IMAGE:-$2}"
 # Base image to start with.
 BASE_IMAGE="${BASE_IMAGE:-drevops/mariadb-drupal-data}"
 
+# User ID to run the container with.
+RUN_USER="${RUN_USER:-1000}"
+
 # ------------------------------------------------------------------------------
 
 [ -z "${DB_FILE}" ] && echo "ERROR: Path to the database dump file must be provided as a first argument." && exit 1
@@ -28,20 +31,31 @@ BASE_IMAGE="${BASE_IMAGE:-drevops/mariadb-drupal-data}"
 image="${DST_IMAGE}"
 [ -n "${image##*:*}" ] && image="${image}:latest"
 
+user_opts=()
+if [ -n "${RUN_USER}" ]; then
+  user_opts=(--user "${RUN_USER}")
+fi
+
 # Run container using the base image in the background.
-cid=$(docker run -d --rm "${BASE_IMAGE}")
+cid=$(docker run "${user_opts[@]}" -d --rm "${BASE_IMAGE}")
 echo "==> Started container with ID ${cid} from the base image ${BASE_IMAGE}."
+
 echo -n "==> Waiting for the service to become ready."
-docker exec -i "${cid}" sh -c "until nc -z localhost 3306; do sleep 1; echo -n .; done; echo"
+docker exec "${user_opts[@]}" -i "${cid}" sh -c "until nc -z localhost 3306; do sleep 1; echo -n .; done; echo"
+
 echo "==> Importing database from the file."
-cat "${DB_FILE}" | docker exec -i "${cid}" /usr/bin/mysql
+cat "${DB_FILE}" | docker exec "${user_opts[@]}" -i "${cid}" /usr/bin/mysql
+
 # Testing that the data was successfully imported.
-if docker exec "${cid}" /usr/bin/mysql -e "show tables;" | grep -q users; then
+if docker exec "${user_opts[@]}" "${cid}" /usr/bin/mysql -e "show tables;" | grep -q users; then
   echo "==> Successfully imported data.";
 else
   echo "ERROR: failed to import data."
   exit 1
 fi
+
+# Update permissions on the seeded DB files.
+docker exec --user root "${cid}" bash -c "chown -R mysql /var/lib/db-data && /bin/fix-permissions /var/lib/db-data"
 
 echo "==> Committing image with name \"${image}\"."
 iid=$(docker commit "${cid}" "${image}")

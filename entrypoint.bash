@@ -48,7 +48,7 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 
     # @note: Added re-creation of the config for descendant images to have
     # the same password-less client login experience as for the parent image.
-    if ! -f /var/lib/mysql/.my.cnf; then
+    if [ ! -f /var/lib/mysql/.my.cnf ]; then
       echo "[client]" >> /var/lib/mysql/.my.cnf
       echo "user=root" >> /var/lib/mysql/.my.cnf
       echo "password=${MARIADB_ROOT_PASSWORD}"  >> /var/lib/mysql/.my.cnf

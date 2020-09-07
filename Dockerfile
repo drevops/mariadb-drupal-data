@@ -16,7 +16,8 @@ COPY entrypoint.bash /lagoon/entrypoints/9999-mariadb-entrypoint
 USER root
 
 RUN mkdir -p /var/lib/db-data \
-    && chown mysql /var/lib/db-data \
+    && chown -R mysql /var/lib/db-data \
+    && chgrp -R mysql /var/lib/db-data \
     && /bin/fix-permissions /var/lib/db-data
 
 USER mysql

@@ -67,7 +67,7 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
       echo "password=${MARIADB_ROOT_PASSWORD}"  >> /var/lib/mysql/.my.cnf
     fi
 
-    echo "starting mysql for mysql upgrade."
+    echo "starting mysql"
     /usr/bin/mysqld --skip-networking --wsrep_on=OFF &
     pid="$!"
     echo "pid is $pid"
@@ -80,7 +80,11 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
       sleep 1
     done
 
-    mysql_upgrade --force
+    # @note: Added a flag to skip upgrade.
+    if [ -z "$SKIP_MYSQL_UPGRADE" ]; then
+      echo "starting mysql upgrade"
+      mysql_upgrade --force
+    fi
 
     if ! kill -s TERM "$pid" || ! wait "$pid"; then
       echo >&2 'MySQL init process failed.'

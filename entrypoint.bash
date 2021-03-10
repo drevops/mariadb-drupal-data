@@ -80,8 +80,8 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
       sleep 1
     done
 
-    # @note: Added a flag to skip upgrade.
-    if [ -z "$SKIP_MYSQL_UPGRADE" ]; then
+    # @note: Added a flag to force upgrade.
+    if [ -n "${FORCE_MYSQL_UPGRADE:-}" ]; then
       echo "starting mysql upgrade"
       mysql_upgrade --force
     fi

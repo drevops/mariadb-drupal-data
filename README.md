@@ -1,7 +1,9 @@
 # MariaDB Database data container
 Allows capturing database data as a Docker layer.
 
-[![CircleCI](https://circleci.com/gh/drevops/mariadb-drupal-data.svg?style=svg)](https://circleci.com/gh/drevops/mariadb-drupal-data)
+[![CircleCI](https://circleci.com/gh/drevops/mariadb-drupal-data.svg?style=shield)](https://circleci.com/gh/drevops/mariadb-drupal-data)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/drevops/mariadb-drupal-data)
+![LICENSE](https://img.shields.io/github/license/drevops/mariadb-drupal-data)
 
 ## How it works
 Usually, MariaDB uses data directory specified as a Docker volume that is

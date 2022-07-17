@@ -4,7 +4,7 @@
 #
 # bats --tap tests/bats/data.bats
 #
-# In some cases, a shell may report platform incorrectly. Run with forced platform:
+# In some cases, shell may report platform incorrectly. Run with forced platform:
 # DOCKER_DEFAULT_PLATFORM=linux/amd64 bats --tap tests/bats/data.bats
 #
 

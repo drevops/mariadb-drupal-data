@@ -37,7 +37,7 @@ jobs:
           command: |
             if [ "${CIRCLE_BRANCH:0:8}" = "feature/" ]; then
               export DOCKER_IMAGE_NAME_SRC="$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" 
-              export DOCKER_IMAGE_NAME_DST="$DOCKER_IMAGE_NAME_SRC:feature-${CIRCLE_BRANCH:0:8}" 
+              export DOCKER_IMAGE_NAME_DST="$DOCKER_IMAGE_NAME_SRC:feature-${CIRCLE_BRANCH:8}" 
               docker tag "$DOCKER_IMAGE_NAME_SRC:latest" $DOCKER_IMAGE_NAME_DST
               echo "${DREVOPS_DOCKER_REGISTRY_TOKEN}" | docker login --username "${DREVOPS_DOCKER_REGISTRY_USERNAME}" --password-stdin "${DREVOPS_DOCKER_REGISTRY:-docker.io}"
               docker push "$DOCKER_IMAGE_NAME_DST"

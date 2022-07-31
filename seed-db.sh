@@ -5,9 +5,12 @@
 # Usage:
 # ./seed-db.sh path/to/db.sql myorg/myimage:latest
 #
+# DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed-db.sh path/to/db.sql myorg/myimage:latest
+#
 # shellcheck disable=SC2002
 
 set -e
+[ -n "${DREVOPS_DEBUG}" ] && set -x
 
 # Database dump file as a first argument to the script.
 DB_FILE="${DB_FILE:-$1}"
@@ -21,11 +24,24 @@ BASE_IMAGE="${BASE_IMAGE:-drevops/mariadb-drupal-data}"
 # User ID to run the container with.
 RUN_USER="${RUN_USER:-1000}"
 
+# Docker target platform architecture.
+# Note that some shells report platform incorrectly. In such cases, run
+# as `DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed-db.sh path/to/db.sql myorg/myimage:latest`
+DOCKER_DEFAULT_PLATFORM="${DOCKER_DEFAULT_PLATFORM:-}"
+
 # ------------------------------------------------------------------------------
 
 [ -z "${DB_FILE}" ] && echo "ERROR: Path to the database dump file must be provided as a first argument." && exit 1
 [ -z "${DST_IMAGE}" ] && echo "ERROR: Destination docker image name must be provided as a second argument." && exit 1
 [ ! -f "${DB_FILE}" ] && echo "ERROR: Specified database dump file ${DB_FILE} does not exist." && exit 1
+
+if [ "$(uname -m)" = "arm64" ]; then
+  export DOCKER_DEFAULT_PLATFORM=linux/amd64
+fi
+
+if [ -n "${DOCKER_DEFAULT_PLATFORM}" ]; then
+  echo "==> Using ${DOCKER_DEFAULT_PLATFORM} platform architecture."
+fi
 
 # Normalise image - add ":latest" if tag was not provided.
 image="${DST_IMAGE}"

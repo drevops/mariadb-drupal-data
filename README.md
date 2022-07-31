@@ -6,6 +6,7 @@ Allows capturing database data as a Docker layer.
 ![LICENSE](https://img.shields.io/github/license/drevops/mariadb-drupal-data)
 
 ## How it works
+
 Usually, MariaDB uses data directory specified as a Docker volume that is
 mounted onto host: this allows retaining data after container restarts.
 
@@ -35,15 +36,29 @@ imported database, which saves a significant amount of time for database
 imports.
 
 ## Seeding image with your database
+
 `./seed-db.sh` allows to easily create your own image with "seeded" database.
 
 1. `./seed-db.sh path/to/db.sql myorg/myimage:latest`
 2. `docker push myorg/myimage:latest`
 
+In some cases, shell may report platform incorrectly. Run with forced platform:
+
+    DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed-db.sh path/to/db.sql myorg/myimage:latest
+
 ## Maintenance
-This image is built and pushed manually to DockerHub once parent image
-is updated.
 
-Versions are following versions of the upstream image to ease maintenance.
+### Running tests
 
-See the [CI configuration](.circleci/config.yml) for running tests locally.
+    bats tests/bats/data.bats --tap
+    # or  
+    DOCKER_DEFAULT_PLATFORM=linux/amd64 bats --tap tests/bats/data.bats
+
+### Publishing
+
+This image is built and pushed automatically to DockerHub:
+1. For all commits to `master` branch as `:latest` tag.
+2. For releases as `:<version>` tag.
+3. For `feature/*` branches as `:<branch>` tag.
+
+Versions are following versions of the [upstream image](https://hub.docker.com/r/uselagoon/mariadb-drupal/tags) to ease maintenance.

@@ -144,7 +144,7 @@ copy_code(){
 
   step "Download fixture DB dump."
   file="${BUILD_DIR}/db.sql"
-  CURL_DB_URL=https://raw.githubusercontent.com/wiki/drevops/drevops/db_d9.dist.sql.md
+  CURL_DB_URL=https://raw.githubusercontent.com/wiki/drevops/drevops/db_d9.demo.sql.md
   curl -L "${CURL_DB_URL}" -o "${file}"
 
   export BASE_IMAGE="${tag}"

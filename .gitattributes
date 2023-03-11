@@ -1,0 +1,4 @@
+.circleci            export-ignore
+.gitattributes       export-ignore
+.github/FUNDING.yml  export-ignore
+.gitignore           export-ignore

@@ -34,6 +34,8 @@ DOCKER_DEFAULT_PLATFORM="${DOCKER_DEFAULT_PLATFORM:-}"
 [ -z "${DB_FILE}" ] && echo "ERROR: Path to the database dump file must be provided as a first argument." && exit 1
 [ -z "${DST_IMAGE}" ] && echo "ERROR: Destination docker image name must be provided as a second argument." && exit 1
 [ ! -f "${DB_FILE}" ] && echo "ERROR: Specified database dump file ${DB_FILE} does not exist." && exit 1
+[ "${BASE_IMAGE##*/}" = "$BASE_IMAGE" ] && echo "ERROR ${BASE_IMAGE} should be in a format myorg/myimage." && exit 1
+[ "${DST_IMAGE##*/}" = "$DST_IMAGE" ] && echo "ERROR ${DST_IMAGE} should be in a format myorg/myimage." && exit 1
 
 if [ "$(uname -m)" = "arm64" ]; then
   export DOCKER_DEFAULT_PLATFORM=linux/amd64
@@ -71,7 +73,7 @@ else
 fi
 
 # Update permissions on the seeded DB files.
-docker exec --user root "${cid}" bash -c "chown -R mysql /var/lib/db-data && /bin/fix-permissions /var/lib/db-data"
+docker exec --user root "${cid}" bash -c "chown -R mysql /var/lib/db-data && /bin/fix-permissions /var/lib/db-data" || true
 
 echo "==> Committing image with name \"${image}\"."
 iid=$(docker commit "${cid}" "${image}")

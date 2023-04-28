@@ -9,8 +9,10 @@
 #
 FROM uselagoon/mariadb-drupal:23.2.0
 
+# Set the data directory to a different location that a mounted volume.
 ENV MARIADB_DATA_DIR=/var/lib/db-data
 
+# Add customised entrypoint script.
 COPY entrypoint.bash /lagoon/entrypoints/9999-mariadb-entrypoint
 
 USER root
@@ -22,4 +24,5 @@ RUN mkdir -p /var/lib/db-data \
 
 USER mysql
 
+# @todo Try removing the CMD override.
 CMD ["mysqld", "--datadir=/var/lib/db-data"]

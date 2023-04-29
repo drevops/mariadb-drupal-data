@@ -28,7 +28,11 @@ setup(){
     step "Using ${DOCKER_DEFAULT_PLATFORM} platform architecture."
   fi
 
-  # Force full debug output in scritps.
+  # Due to a limitation in buildx, we are building for a single platform for these tests.
+  export BUILDX_PLATFORMS="${DOCKER_DEFAULT_PLATFORM:-linux/amd64}"
+  export DOCKER_BUILDKIT=1
+
+  # Force full debug output in scripts.
   export DREVOPS_DEBUG=1
 
   pushd "${BUILD_DIR}" > /dev/null || exit 1
@@ -75,7 +79,7 @@ copy_code(){
   image="testorg/tesimagebase:${tag}"
 
   step "Build default image ${image}."
-  docker build -t "${image}" .
+  docker buildx build --platform "${BUILDX_PLATFORMS}" --load -t "${image}" .
 
   step "Starting new detached container from the built image."
   run docker run --user ${user} -d "${image}" 2>/dev/null
@@ -143,7 +147,7 @@ copy_code(){
   export BASE_IMAGE="testorg/tesimagebase:${tag}"
 
   step "Build fresh image tagged with $tag."
-  docker build --no-cache -t "${BASE_IMAGE}" .
+  docker buildx build --platform "${BUILDX_PLATFORMS}" --load --no-cache -t "${BASE_IMAGE}" .
 
   step "Download fixture DB dump."
   file="${BUILD_DIR}/db.sql"

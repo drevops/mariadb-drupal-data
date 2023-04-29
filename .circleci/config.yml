@@ -3,9 +3,6 @@ jobs:
   build:
     docker:
       - image: drevops/ci-builder
-        environment:
-          GOSS_FILES_STRATEGY: cp
-          DOCKER_VERSION: 19.03.5
     working_directory: /root/project
     steps:
       - checkout
@@ -13,16 +10,6 @@ jobs:
           name: Lint scripts
           command: shellcheck seed-db.sh
       - setup_remote_docker
-      - run:
-          name: Install Docker
-          command: |
-            curl -L -o "/tmp/docker-${DOCKER_VERSION}.tgz" "https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz" \
-            && tar -xz -C /tmp -f "/tmp/docker-${DOCKER_VERSION}.tgz" \
-            && mv /tmp/docker/* /usr/bin \
-            && docker --version
-      - run:
-          name: Install goss
-          command: curl -fsSL https://goss.rocks/install | sh && goss --version
       - run:
           name: Run Goss tests
           command: |

@@ -36,10 +36,10 @@ setup(){
 
 teardown(){
   # Stop and remove all test containers.
-  docker ps --all  --format "{{.ID}}\t{{.Image}}" | grep "${TEST_DOCKER_TAG_PREFIX}" | awk '{print $1}' | xargs docker rm -f -v
+  docker ps --all  --format "{{.ID}}\t{{.Image}}" | grep testorg | awk '{print $1}' | xargs docker rm -f -v
 
   # Remove all test images.
-  docker images -a | grep "${TEST_DOCKER_TAG_PREFIX}" | awk '{print $3}' | xargs docker rmi -f || true
+  docker images -a | grep "testorg" | awk '{print $3}' | xargs docker rmi -f || true
 
   popd > /dev/null || cd "${CUR_DIR}" || exit 1
 }
@@ -63,20 +63,22 @@ copy_code(){
   assert_dir_exists "${dst}"
   assert_git_repo "${CUR_DIR}"
   pushd "${CUR_DIR}" > /dev/null || exit 1
-  # Copy latest commit to the build directory.
+  # Copy the latest commit to the build directory.
   git archive --format=tar HEAD | (cd "${dst}" && tar -xf -)
   popd > /dev/null || exit 1
 }
 
 @test "Data added to the image is captured and preserved" {
   user=1000
-  tag="${TEST_DOCKER_TAG_PREFIX}$(random_string_lower)"
 
-  step "Build default image tagged with $tag."
-  docker build -t "${tag}" .
+  tag="${TEST_DOCKER_TAG_PREFIX}$(random_string_lower)"
+  image="testorg/tesimagebase:${tag}"
+
+  step "Build default image ${image}."
+  docker build -t "${image}" .
 
   step "Starting new detached container from the built image."
-  run docker run --user ${user} -d "${tag}"
+  run docker run --user ${user} -d "${image}" 2>/dev/null
   assert_success
   cid="${output}"
   substep "Started container ${cid}"
@@ -112,12 +114,12 @@ copy_code(){
   substep "Created new committed image ${committed_image_id}."
 
   step "Create a new tag for committed image."
-  new_tag="${tag}-latest"
-  docker tag "${committed_image_id}" "${new_tag}"
-  substep "Tagged committed image ${committed_image_id} with a tag ${new_tag}."
+  new_image="${image}-latest"
+  docker tag "${committed_image_id}" "${new_image}"
+  substep "Tagged committed image ${committed_image_id} as ${new_image}."
 
-  step "Start new container from the committed image."
-  run docker run --user ${user} -d "${new_tag}"
+  step "Start new container from the tagged committed image ${new_image}."
+  run docker run --user ${user} -d "${new_image}"
   assert_success
   new_cid="${output}"
   substep "Started new container ${new_cid}"
@@ -138,25 +140,25 @@ copy_code(){
 
 @test "Seeding of the image works" {
   tag="${TEST_DOCKER_TAG_PREFIX}$(random_string_lower)"
+  export BASE_IMAGE="testorg/tesimagebase:${tag}"
 
   step "Build fresh image tagged with $tag."
-  docker build --no-cache -t "${tag}" .
+  docker build --no-cache -t "${BASE_IMAGE}" .
 
   step "Download fixture DB dump."
   file="${BUILD_DIR}/db.sql"
   CURL_DB_URL=https://raw.githubusercontent.com/wiki/drevops/drevops/db.demo.sql.md
   curl -L "${CURL_DB_URL}" -o "${file}"
 
-  export BASE_IMAGE="${tag}"
   export RUN_USER="1000"
-  step "Run DB seeding script from base image tagged with ${BASE_IMAGE}"
-  run ./seed-db.sh "${file}" testorgdst/tesimagedst:latest
+  step "Run DB seeding script from base image ${BASE_IMAGE}"
+  run ./seed-db.sh "${file}" testorg/tesimagedst:latest
   assert_success
   debug "${output}"
 
   step "Start container from the seeded image."
   # Start container with a non-root user to imitate limited host permissions.
-  cid=$(docker run --user 1000 -d --rm "testorgdst/tesimagedst:latest")
+  cid=$(docker run --user 1000 -d --rm "testorg/tesimagedst:latest")
   substep "Waiting for the service to become ready."
   docker exec -i "${cid}" sh -c "until nc -z localhost 3306; do sleep 1; echo -n .; done; echo"
 

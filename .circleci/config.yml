@@ -2,7 +2,10 @@ version: 2
 jobs:
   build:
     docker:
-      - image: drevops/ci-builder
+      - image: drevops/ci-builder:23.5.0
+        environment:
+          BUILDX_VERSION: v0.10.4
+          BUILDX_PLATFORMS: linux/amd64,linux/arm64,linux/arm/v7
     working_directory: /root/project
     steps:
       - checkout
@@ -10,6 +13,11 @@ jobs:
           name: Lint scripts
           command: shellcheck seed-db.sh
       - setup_remote_docker
+      - run:
+          name: Create Docker builder and install emulators
+          command: |
+            docker buildx create --name multiarch --driver docker-container --use
+            docker run -it --rm --privileged tonistiigi/binfmt --install all
       - run:
           name: Run Goss tests
           command: |
@@ -19,11 +27,12 @@ jobs:
           name: Run Bats tests
           command: bats tests/bats/data.bats --tap
       - run:
-          name: Deploy image for feature branches
+          name: Deploy image
           command: |
-            if [ "${CIRCLE_BRANCH:0:8}" = "feature/" ]; then
-              export DST_DOCKER_TAG="$(echo ${CIRCLE_BRANCH} | sed 's/[^a-zA-Z0-9]/-/g')"
-              docker build -t drevops/mariadb-drupal-data:${DST_DOCKER_TAG} .            
-              echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin "${DOCKER_REGISTRY:-docker.io}"
-              docker push "drevops/mariadb-drupal-data:${DST_DOCKER_TAG}"
-            fi
+            echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin          
+            if [ -n "${CIRCLE_TAG}" ]; then
+              export TAG="${CIRCLE_TAG}"
+            elif [ "${CIRCLE_BRANCH}" != "main" ]; then
+              export TAG="$(echo ${CIRCLE_BRANCH} | sed 's/[^a-zA-Z0-9]/-/g')"
+            fi            
+            DOCKER_BUILDKIT=1 docker buildx build --no-cache --platform "${BUILDX_PLATFORMS}" --tag drevops/mariadb-drupal-data:${TAG:-canary} --push .

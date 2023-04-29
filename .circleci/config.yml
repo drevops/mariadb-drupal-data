@@ -24,11 +24,10 @@ jobs:
           name: Install goss
           command: curl -fsSL https://goss.rocks/install | sh && goss --version
       - run:
-          name: Build image
-          command: docker build -t drevops/mariadb-drupal-data:latest .
-      - run:
           name: Run Goss tests
-          command: GOSS_FILES_PATH=tests/dgoss dgoss run -i drevops/mariadb-drupal-data:latest
+          command: |
+            docker build -t gosstestorg/gosstestimage:goss-test-tag .
+            GOSS_FILES_PATH=tests/dgoss dgoss run -i gosstestorg/gosstestimage:goss-test-tag
       - run:
           name: Run Bats tests
           command: bats tests/bats/data.bats --tap
@@ -36,9 +35,8 @@ jobs:
           name: Deploy image for feature branches
           command: |
             if [ "${CIRCLE_BRANCH:0:8}" = "feature/" ]; then
-              export DOCKER_IMAGE_NAME_SRC="$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" 
-              export DOCKER_IMAGE_NAME_DST="$DOCKER_IMAGE_NAME_SRC:feature-${CIRCLE_BRANCH:8}" 
-              docker tag "$DOCKER_IMAGE_NAME_SRC:latest" $DOCKER_IMAGE_NAME_DST
-              echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin "${DREVOPS_DOCKER_REGISTRY:-docker.io}"
-              docker push "$DOCKER_IMAGE_NAME_DST"
+              export DST_DOCKER_TAG="$(echo ${CIRCLE_BRANCH} | sed 's/[^a-zA-Z0-9]/-/g')"
+              docker build -t drevops/mariadb-drupal-data:${DST_DOCKER_TAG} .            
+              echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin "${DOCKER_REGISTRY:-docker.io}"
+              docker push "drevops/mariadb-drupal-data:${DST_DOCKER_TAG}"
             fi

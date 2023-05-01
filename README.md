@@ -57,8 +57,8 @@ In some cases, shell may report platform incorrectly. Run with forced platform:
 ### Publishing
 
 This image is built and pushed automatically to DockerHub:
-1. For all commits to `master` branch as `:latest` tag.
-2. For releases as `:<version>` tag.
-3. For `feature/*` branches as `:<branch>` tag.
+1. For all commits to `main` branch as `canary` tag.
+2. For releases as `:<version>` and `latest` tag.
+3. For `feature/my-branch` branches as `feature-my-branch` tag.
 
 Versions are following versions of the [upstream image](https://hub.docker.com/r/uselagoon/mariadb-drupal/tags) to ease maintenance.

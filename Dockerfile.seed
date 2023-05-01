@@ -1,0 +1,16 @@
+ARG SEED_IMAGE=drevops/mariadb-drupal-data:latest
+
+FROM ${SEED_IMAGE}
+
+# Data directory to copy from.
+ARG SRC_DATADIR=.data
+
+COPY ${SRC_DATADIR} /var/lib/db-data/
+
+USER root
+
+RUN chown -R mysql /var/lib/db-data \
+    && chgrp -R mysql /var/lib/db-data \
+    && /bin/fix-permissions /var/lib/db-data
+
+USER mysql

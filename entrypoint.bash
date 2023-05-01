@@ -7,8 +7,6 @@
 
 set -eo pipefail
 
-set -x
-
 # Locations
 CONTAINER_SCRIPTS_DIR="/usr/share/container-scripts/mysql"
 

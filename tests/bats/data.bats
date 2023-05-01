@@ -33,7 +33,7 @@ setup(){
   export DOCKER_BUILDKIT=1
 
   # Force full debug output in scripts.
-  export DREVOPS_DEBUG=1
+  # export DREVOPS_DEBUG=1
 
   pushd "${BUILD_DIR}" > /dev/null || exit 1
 }
@@ -72,42 +72,41 @@ copy_code(){
   popd > /dev/null || exit 1
 }
 
-@test "Data added to the image is captured and preserved" {
-  user=1000
-
+@test "Data is preserved in an image captured from running container" {
   tag="${TEST_DOCKER_TAG_PREFIX}$(random_string_lower)"
+  # Using a local image for this test.
   image="testorg/tesimagebase:${tag}"
 
-  step "Build default image ${image}."
+  step "Build default image ${image} and load into 'docker images'."
   docker buildx build --platform "${BUILDX_PLATFORMS}" --load -t "${image}" .
 
   step "Starting new detached container from the built image."
-  run docker run --user ${user} -d "${image}" 2>/dev/null
+  run docker run --user 1000 -d "${image}" 2>/dev/null
   assert_success
   cid="${output}"
   substep "Started container ${cid}"
 
   step "Assert that the database directory is present."
-  docker exec --user ${user} "${cid}" test -d /var/lib/db-data
+  docker exec --user 1000 "${cid}" test -d /var/lib/db-data
 
   step "Wait for mysql to start."
   sleep 5
 
   step "Assert that the database is present after start."
-  run docker exec --user ${user} "${cid}" mysql -e "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'drupal';"
+  run docker exec --user 1000 "${cid}" mysql -e "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'drupal';"
   assert_success
   assert_contains "drupal" "${output}"
 
   step "Assert that the table is not present after start."
-  run docker exec --user ${user} "${cid}" mysql -e "USE 'drupal'; show tables like 'mytesttable';"
+  run docker exec --user 1000 "${cid}" mysql -e "USE 'drupal'; show tables like 'mytesttable';"
   assert_success
   assert_not_contains "mytesttable" "${output}"
 
   step "Create a table in the database."
-  docker exec --user ${user} "${cid}" mysql -e "USE 'drupal'; CREATE TABLE mytesttable(c CHAR(20) CHARACTER SET utf8 COLLATE utf8_bin);"
+  docker exec --user 1000 "${cid}" mysql -e "USE 'drupal'; CREATE TABLE mytesttable(c CHAR(20) CHARACTER SET utf8 COLLATE utf8_bin);"
 
   step "Assert that the table is present after creation."
-  run docker exec --user ${user} "${cid}" mysql -e "USE 'drupal'; show tables like 'mytesttable';"
+  run docker exec --user 1000 "${cid}" mysql -e "USE 'drupal'; show tables like 'mytesttable';"
   assert_success
   assert_contains "mytesttable" "${output}"
 
@@ -123,7 +122,7 @@ copy_code(){
   substep "Tagged committed image ${committed_image_id} as ${new_image}."
 
   step "Start new container from the tagged committed image ${new_image}."
-  run docker run --user ${user} -d "${new_image}"
+  run docker run --user 1000 -d "${new_image}"
   assert_success
   new_cid="${output}"
   substep "Started new container ${new_cid}"
@@ -132,21 +131,21 @@ copy_code(){
   sleep 5
 
   step "Assert that the database is present after restart."
-  run docker exec --user ${user} "${new_cid}" mysql -e "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'drupal';"
+  run docker exec --user 1000 "${new_cid}" mysql -e "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'drupal';"
   assert_success
   assert_contains "drupal" "${output}"
 
   step "Assert that the table is present after restart."
-  run docker exec --user ${user} "${new_cid}" mysql -e "USE 'drupal'; show tables like 'mytesttable';"
+  run docker exec --user 1000 "${new_cid}" mysql -e "USE 'drupal'; show tables like 'mytesttable';"
   assert_success
   assert_contains "mytesttable" "${output}"
 }
 
-@test "Seeding of the image works" {
+@test "Seeding of the data works" {
   tag="${TEST_DOCKER_TAG_PREFIX}$(random_string_lower)"
   export BASE_IMAGE="testorg/tesimagebase:${tag}"
 
-  step "Build fresh image tagged with $tag."
+  step "Build fresh image tagged with ${BASE_IMAGE}."
   docker buildx build --platform "${BUILDX_PLATFORMS}" --load --no-cache -t "${BASE_IMAGE}" .
 
   step "Download fixture DB dump."
@@ -154,15 +153,15 @@ copy_code(){
   CURL_DB_URL=https://raw.githubusercontent.com/wiki/drevops/drevops/db.demo.sql.md
   curl -L "${CURL_DB_URL}" -o "${file}"
 
-  export RUN_USER="1000"
   step "Run DB seeding script from base image ${BASE_IMAGE}"
-  run ./seed-db.sh "${file}" testorg/tesimagedst:latest
+  dst_image="drevops/mariadb-drupal-data-test:${tag}"
+  run ./seed-db.sh "${file}" ${dst_image}
   assert_success
   debug "${output}"
 
-  step "Start container from the seeded image."
+  step "Start container from the seeded image ${dst_image}."
   # Start container with a non-root user to imitate limited host permissions.
-  cid=$(docker run --user 1000 -d --rm "testorg/tesimagedst:latest")
+  cid=$(docker run --user 1000 -d --rm "${dst_image}")
   substep "Waiting for the service to become ready."
   docker exec -i "${cid}" sh -c "until nc -z localhost 3306; do sleep 1; echo -n .; done; echo"
 

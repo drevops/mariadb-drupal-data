@@ -25,7 +25,9 @@ jobs:
             GOSS_FILES_PATH=tests/dgoss dgoss run -i gosstestorg/gosstestimage:goss-test-tag
       - run:
           name: Run Bats tests
-          command: bats tests/bats/data.bats --tap
+          command: |
+            echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin
+            bats tests/bats/data.bats --tap
       - run:
           name: Deploy image
           command: |

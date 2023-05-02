@@ -79,7 +79,7 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
     done
 
     # @note: Added a flag to force upgrade.
-    if [ -n "${FORCE_MYSQL_UPGRADE:-}" ]; then
+    if [ "${FORCE_MYSQL_UPGRADE:-}" = "1" ]; then
       echo "starting mysql upgrade"
       mysql_upgrade --force
     fi

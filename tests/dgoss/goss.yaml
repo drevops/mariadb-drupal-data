@@ -11,6 +11,45 @@ file:
     exists: true
     contains: []
 
+  /lagoon/entrypoints/00-umask.sh:
+    exists: true
+
+  /lagoon/entrypoints/10-passwd.sh:
+    exists: true
+
+  /lagoon/entrypoints/100-mariadb-logging.bash:
+    exists: true
+
+  /lagoon/entrypoints/150-mariadb-performance.bash:
+    exists: true
+
+  /lagoon/entrypoints/200-mariadb-envplate.bash:
+    exists: true
+
+  /lagoon/entrypoints/50-dotenv.sh:
+    exists: true
+
+  /lagoon/entrypoints/55-generate-env.sh:
+    exists: true
+
+  /lagoon/entrypoints/90-cronjobs.sh:
+    exists: true
+
+  /lagoon/entrypoints/999-readiness.sh:
+    exists: true
+
+  /lagoon/entrypoints/9999-mariadb-init.bash:
+    exists: true
+    contains:
+      - Entrypoint to start mysql service with custom data directory.
+      - This file is minimally modified to be easily updatable from the upstream.
+
+ls /lagoon/entrypoints | wc -l:
+  exit-status: 0
+  stdout: '10'
+  stderr: ''
+  contains: []
+
 package:
   mariadb:
     installed: true

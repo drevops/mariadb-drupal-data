@@ -168,4 +168,20 @@ copy_code(){
   step "Assert that data was captured into the new image."
   run docker exec "${cid}" /usr/bin/mysql -e "use drupal;show tables;" drupal
   assert_output_contains "users"
+
+  run docker logs "${cid}"
+  assert_output_not_contains "starting mysql upgrade"
+
+  step "Start container from the seeded image ${dst_image} and request an upgrade."
+  # Start container with a non-root user to imitate limited host permissions.
+  cid=$(docker run --user 1000 -d -e FORCE_MYSQL_UPGRADE=1 --rm "${dst_image}")
+  substep "Waiting for the service to become ready."
+  docker exec -i "${cid}" sh -c "until nc -z localhost 3306; do sleep 1; echo -n .; done; echo"
+
+  step "Assert that data was captured into the new image."
+  run docker exec "${cid}" /usr/bin/mysql -e "use drupal;show tables;" drupal
+  assert_output_contains "users"
+
+  run docker logs "${cid}"
+  assert_output_contains "starting mysql upgrade"
 }

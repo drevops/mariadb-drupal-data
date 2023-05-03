@@ -13,7 +13,7 @@ FROM uselagoon/mariadb-drupal:23.4.0
 ENV MARIADB_DATA_DIR=/var/lib/db-data
 
 # Add customised entrypoint script.
-COPY entrypoint.bash /lagoon/entrypoints/9999-mariadb-entrypoint
+COPY 9999-mariadb-init.bash /lagoon/entrypoints/
 
 USER root
 

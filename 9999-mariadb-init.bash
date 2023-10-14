@@ -4,7 +4,7 @@
 #
 # This file is minimally modified to be easily updatable from the upstream.
 # @see https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb/entrypoints/9999-mariadb-init.bash
-
+# LCOV_EXCL_START
 set -eo pipefail
 
 # Locations
@@ -167,3 +167,4 @@ EOF
   echo "done, now starting daemon"
 
 fi
+# LCOV_EXCL_END

@@ -4,479 +4,105 @@
 # Bats test helpers.
 #
 # shellcheck disable=SC2119,SC2120
+#!/usr/bin/env bash
+#
+# Helpers related to common testing functionality.
+#
+# Run with "--verbose-run" to see debug output.
+#
 
-# Guard against bats executing this twice
-if [ -z "$TEST_PATH_INITIALIZED" ]; then
-  export TEST_PATH_INITIALIZED=true
+################################################################################
+#                       BATS HOOK IMPLEMENTATIONS                              #
+################################################################################
 
-  # Add BATS test directory to the PATH.
-  PATH="$(dirname "${BATS_TEST_DIRNAME}"):$PATH"
+setup() {
+  # For a list of available variables see:
+  # @see https://bats-core.readthedocs.io/en/stable/writing-tests.html#special-variables
 
-  # BATS_TMPDIR - the location to a directory that may be used to store
-  # temporary files. Provided by bats. Created once for the duration of whole
-  # suite run.
-  # Do not use BATS_TMPDIR, instead use BATS_TEST_TMPDIR.
-  #
-  # BATS_TEST_TMPDIR - unique location for temp files per test.
-  # shellcheck disable=SC2002
-  random_suffix=$(cat /dev/urandom | env LC_CTYPE=C tr -dc 'a-zA-Z0-9' | fold -w 4 | head -n 1)
-  BATS_TEST_TMPDIR="${BATS_TMPDIR}/bats-test-tmp-${random_suffix}"
-  [ -d "${BATS_TEST_TMPDIR}" ] && rm -Rf "${BATS_TEST_TMPDIR}" > /dev/null
-  mkdir -p "${BATS_TEST_TMPDIR}"
+  # Register a path to libraries.
+  export BATS_LIB_PATH="${BATS_TEST_DIRNAME}/node_modules"
 
-  export BATS_TEST_TMPDIR
+  # Load 'bats-helpers' library.
+  bats_load_library bats-helpers
 
-  echo "BATS_TEST_TMPDIR dir: ${BATS_TEST_TMPDIR}" >&3
-fi
+  # Setup command mocking.
+  setup_mock
 
-flunk(){
-  { if [ "$#" -eq 0 ]; then cat -
-    else echo "$@"
-    fi
-  } | sed "s:${BATS_TEST_TMPDIR}:\${BATS_TEST_TMPDIR}:g" >&2
-  return 1
-}
+  # Current directory where the test is run from.
+  # shellcheck disable=SC2155
+  export CUR_DIR="$(pwd)"
 
-assert_success(){
-  # shellcheck disable=SC2154
-  if [ "${status}" -ne 0 ]; then
-    format_error "command failed with exit status ${status}" | flunk
-  elif [ "$#" -gt 0 ]; then
-    assert_output "${1}"
+  # Directory where the init script will be running on.
+  # As a part of test setup, the local copy of Scaffold at the last commit is
+  # copied to this location. This means that during development of tests local
+  # changes need to be committed.
+  export BUILD_DIR="${BUILD_DIR:-"${BATS_TEST_TMPDIR//\/\//\/}/drevops-maria-drupal-data-$(date +%s)"}"
+  fixture_prepare_dir "${BUILD_DIR}"
+
+  # Copy code at the last commit.
+  export BATS_FIXTURE_EXPORT_CODEBASE_ENABLED=1
+  fixture_export_codebase "${BUILD_DIR}" "${CUR_DIR}"
+
+  # Print debug information if "--verbose-run" is passed.
+  # LCOV_EXCL_START
+  if [ "${BATS_VERBOSE_RUN-}" = "1" ]; then
+    echo "BUILD_DIR: ${BUILD_DIR}" >&3
   fi
-}
+  # LCOV_EXCL_END
 
-assert_failure(){
-  # shellcheck disable=SC2154
-  if [ "${status}" -eq 0 ]; then
-    format_error "expected failed exit status" | flunk
-  elif [ "$#" -gt 0 ]; then
-    assert_output "${1}"
-  fi
-}
-
-assert_equal(){
-  if [ "$1" != "$2" ]; then
-    { echo "expected: ${1}"
-      echo "actual:   ${2}"
-    } | flunk
-  fi
-}
-
-assert_contains(){
-  local needle="${1}"
-  local haystack="${2}"
-
-  if echo "$haystack" | $(type -p ggrep grep | head -1) -i -F -- "$needle" > /dev/null; then
-    return 0
-  else
-    format_error "String '${haystack}' does not contain '${needle}'" | flunk
-  fi
-}
-
-assert_not_contains(){
-  local needle="${1}"
-  local haystack="${2}"
-
-  if echo "$haystack" | $(type -p ggrep grep | head -1) -i -F -- "$needle" > /dev/null; then
-    format_error "String '${haystack}'\n contains '${needle}', but should not" | flunk
-  else
-    return 0
-  fi
-}
-
-assert_file_exists(){
-  local file="${1}"
-
-  for f in ${file}; do
-    if [ -e "$f" ]; then
-      return 0
-    else
-      format_error "File ${file} does not exist" | flunk
-    fi
-    ## This is all we needed to know, so we can break after the first iteration.
-    break
-  done
-
-  format_error "File ${file} does not exist" | flunk
-}
-
-assert_file_not_exists(){
-  local file="${1}"
-
-  for f in ${file}; do
-    if [ -e "$f" ]; then
-      format_error "File ${file} exists, but should not" | flunk
-    else
-      return 0
-    fi
-  done
-}
-
-assert_dir_exists(){
-  local dir="${1}"
-
-  if [ -d "${dir}" ] ; then
-    return 0
-  else
-    format_error "Directory ${dir} does not exist" | flunk
-  fi
-}
-
-assert_dir_not_exists(){
-  local dir="${1:-$(pwd)}"
-
-  if [ -d "${dir}" ] ; then
-    format_error "Directory ${dir} exists, but should not" | flunk
-  else
-    return 0
-  fi
-}
-
-assert_dir_empty(){
-  local dir="${1:-$(pwd)}"
-  assert_dir_exists "${dir}" || return 1
-
-  if [ "$(ls -A "${dir}")" ]; then
-    format_error "Directory ${dir} is not empty, but should be" | flunk
-  else
-    return 0
-  fi
-}
-
-assert_dir_not_empty(){
-  local dir="${1:-$(pwd)}"
-  assert_dir_exists "${dir}"
-
-  if [ "$(ls -A "${dir}")" ]; then
-    return 0
-  else
-    format_error "Directory ${dir} is empty, but should not be" | flunk
-  fi
-}
-
-assert_symlink_exists(){
-  local file="${1}"
-
-  if [ ! -h "${file}" ] && [ -f "${file}" ]; then
-    format_error "Regular file ${file} exists, but symlink is expected" | flunk
-  elif [ ! -h "${file}" ]; then
-    format_error "Symlink ${file} does not exist" | flunk
-  else
-    return 0
-  fi
-}
-
-assert_symlink_not_exists(){
-  local file="${1}"
-
-  if [ ! -h "${file}" ] && [ -f "${file}" ]; then
-    return 0
-  elif [ ! -h "${file}" ]; then
-    return 0
-  else
-    format_error "Symlink ${file} exists, but should not" | flunk
-  fi
-}
-
-assert_file_mode(){
-  local file="${1}"
-  local perm="${2}"
-  assert_file_exists "${file}"
-
-  if [ "$(uname)" == "Darwin" ]; then
-    parsed=$(printf "%.3o\n" $(( $(stat -f '0%Lp' "$file") & ~0022 )))
-  else
-    parsed=$(printf "%.3o\n" $(( $(stat --printf '0%a' "$file") & ~0022 )))
+  if [ "$(uname -m)" = "arm64" ]; then
+    export DOCKER_DEFAULT_PLATFORM=linux/amd64
   fi
 
-  if [ "${parsed}" != "${perm}" ]; then
-    format_error "File permissions for file ${file} is '${parsed}', but expected '${perm}'" | flunk
-  else
-    return 0
-  fi
-}
-
-assert_file_contains(){
-  local file="${1}"
-  local string="${2}"
-  assert_file_exists "${file}"
-
-  contents="$(cat "${file}")"
-  assert_contains "${string}" "${contents}"
-}
-
-assert_file_not_contains(){
-  local file="${1}"
-  local string="${2}"
-
-  [ ! -f "${file}" ] && return 0
-
-  contents="$(cat "${file}")"
-  assert_not_contains "${string}" "${contents}"
-}
-
-assert_dir_contains_string(){
-  local dir="${1:-$(pwd)}"
-  local string="${2}"
-
-  assert_dir_exists "${dir}" || return 1
-
-  if grep -rI --exclude-dir='.git' --exclude-dir='.idea' --exclude-dir='vendor' --exclude-dir='node_modules' --exclude-dir='.data' --exclude-dir="scripts/drevops" -l "${string}" "${dir}"; then
-    return 0
-  else
-    format_error "Directory ${dir} does not contain a string '${string}'" | flunk
-  fi
-}
-
-assert_dir_not_contains_string(){
-  local dir="${1:-$(pwd)}"
-  local string="${2}"
-
-  [ ! -d "${dir}" ] && return 0
-
-  if grep -rI --exclude-dir='.git' --exclude-dir='.idea' --exclude-dir='vendor' --exclude-dir='node_modules' --exclude-dir='.data' --exclude-dir="scripts/drevops" -l "${string}" "${dir}"; then
-    format_error "Directory ${dir} contains string '${string}', but should not" | flunk
-  else
-    return 0
-  fi
-}
-
-assert_git_repo(){
-  local dir="${1:-$(pwd)}"
-
-  assert_dir_exists "${dir}" || return 1
-
-  if [ -d "${dir}/.git" ]; then
-    log=$(git --work-tree="${dir}" --git-dir="${dir}/.git" status 2>&1)
-
-    if echo "${log}" | $(type -p ggrep grep | head -1) -i -F -- "not a git repository" > /dev/null; then
-      format_error "Directory ${dir} exists, but it is not a git repository"
-      return 1
-    fi
-
-    return 0
-  else
-    format_error "Directory ${dir} exists, but it is not a git repository" | flunk
-  fi
-}
-
-assert_not_git_repo(){
-  local dir="${1:-$(pwd)}"
-
-  assert_dir_exists "${dir}" || return 1
-
-  if [ -d "${dir}/.git" ]; then
-    format_error "Directory ${dir} exists and it is a git repository, but should not be" | flunk
-  else
-    return 0
-  fi
-}
-
-assert_git_clean(){
-  local dir="${1:-$(pwd)}"
-  local message
-
-  assert_git_repo "${dir}"
-
-  message="$(git --work-tree="${dir}" --git-dir="${dir}/.git" status)"
-  assert_contains "nothing to commit" "${message}"
-}
-
-assert_git_not_clean(){
-  local dir="${1:-$(pwd)}"
-  local message
-
-  assert_git_repo "${dir}"
-
-  message="$(git --work-tree="${dir}" --git-dir="${dir}/.git" status)"
-  assert_not_contains "nothing to commit" "${message}"
-}
-
-assert_git_file_is_tracked(){
-  local file="${1:-}"
-  local dir="${2:-$(pwd)}"
-
-  if [ ! -d "${dir}/.git" ]; then
-    return 1
+  if [ -n "${DOCKER_DEFAULT_PLATFORM-}" ]; then
+    step "Using ${DOCKER_DEFAULT_PLATFORM} platform architecture."
   fi
 
-  git --work-tree="${dir}" --git-dir="${dir}/.git" ls-files --error-unmatch "${1}" &>/dev/null
-  return $?
+  # Due to a limitation in buildx, we are building for a single platform for these tests.
+  export BUILDX_PLATFORMS="${DOCKER_DEFAULT_PLATFORM:-linux/amd64}"
+  export DOCKER_BUILDKIT=1
+
+  export TEST_DOCKER_TAG_PREFIX="bats-test-"
+
+  # Change directory to the current project directory for each test. Tests
+  # requiring to operate outside of BUILD_DIR should change directory explicitly
+  # within their tests.
+  pushd "${BUILD_DIR}" >/dev/null || exit 1
 }
 
-assert_git_file_is_not_tracked(){
-  local file="${1:-}"
-  local dir="${2:-$(pwd)}"
+teardown() {
+  # Stop and remove all test containers.
+  docker ps --all --format "{{.ID}}\t{{.Image}}" | grep testorg | awk '{print $1}' | xargs docker rm -f -v
 
-  if [ ! -d "${dir}/.git" ]; then
-    return 1
-  fi
+  # Remove all test images.
+  docker images -a | grep "testorg" | awk '{print $3}' | xargs docker rmi -f || true
 
-  if git --work-tree="${dir}" --git-dir="${dir}/.git" ls-files --error-unmatch "${1}" &>/dev/null; then
-    return 1
-   else
-    return 0
-  fi
+  # Restore the original directory.
+  popd >/dev/null || cd "${CUR_DIR}" || exit 1
 }
 
-assert_files_equal(){
-  local file1="${1}"
-  local file2="${2}"
-
-  assert_file_exists "${file1}" || return 1
-  assert_file_exists "${file2}" || return 1
-
-  if cmp "${file1}" "${file2}"; then
-    return 0
-  else
-    format_error "File ${file1} is not equal to file ${file2}" | flunk
-  fi
+# Print step.
+step() {
+  debug ""
+  # Using prefix different from command prefix in SUT for easy debug.
+  debug "**> STEP: $1"
 }
 
-assert_files_not_equal(){
-  local file1="${1}"
-  local file2="${2}"
-
-  assert_file_exists "${file1}" || return 1
-  assert_file_exists "${file2}" || return 1
-
-  if cmp "${file1}" "${file2}"; then
-    format_error "File ${file1} is equal to file ${file2}, but it should not be" | flunk
-  else
-    return 0
-  fi
+# Print sub-step.
+substep() {
+  debug ""
+  debug "  > $1"
 }
 
-assert_empty(){
-  if [ "${1}" == "" ] ; then
-    return 0
-  else
-    format_error "String ${1} is not empty, but should be" | flunk
-  fi
+# Run bats with `--tap` option to debug the output.
+debug() {
+  echo "${1}" >&3
 }
 
-assert_not_empty(){
-  if [ "${1}" == "" ] ; then
-    format_error "String ${1} is empty, but should not be" | flunk
-  else
-    return 0
-  fi
-}
-
-assert_output(){
-  local expected
-  if [ $# -eq 0 ]; then
-    expected="$(cat -)"
-  else
-    expected="${1}"
-  fi
-  # shellcheck disable=SC2154
-  assert_equal "${expected}" "${output}"
-}
-
-assert_output_contains(){
-  local expected
-  if [ $# -eq 0 ]; then
-    expected="$(cat -)"
-  else
-    expected="${1}"
-  fi
-  # shellcheck disable=SC2154
-  assert_contains "${expected}" "${output}"
-}
-
-assert_output_not_contains(){
-  local expected
-  if [ $# -eq 0 ]; then
-    expected="$(cat -)"
-  else
-    expected="${1}"
-  fi
-  # shellcheck disable=SC2154
-  assert_not_contains "${expected}" "${output}"
-}
-
-random_string(){
-  local len="${1:-8}"
-  local ret
-  # shellcheck disable=SC2002
-  ret=$(cat /dev/urandom | env LC_CTYPE=C tr -dc 'a-zA-Z0-9' | fold -w "${len}" | head -n 1)
-  echo "${ret}"
-}
-
-random_string_lower(){
+random_string_lower() {
   local len="${1:-8}"
   local ret
   # shellcheck disable=SC2002
   ret=$(cat /dev/urandom | env LC_CTYPE=C tr -dc 'a-z0-9' | fold -w "${len}" | head -n 1)
   echo "${ret}"
-}
-
-prepare_fixture_dir(){
-  local dir="${1:-$(pwd)}"
-  rm -Rf "${dir}" > /dev/null
-  mkdir -p "${dir}"
-  assert_dir_exists "${dir}"
-}
-
-mktouch(){
-  local file="${1}"
-  mkdir -p "$(dirname "${file}")" && touch "${file}"
-}
-
-# Format error message with optional output, if present.
-format_error(){
-  local message="${1}"
-  echo
-  echo "ERROR: ${message}"
-  echo
-
-  if [ "${output}" != "" ]; then
-    echo "----------------------------------------"
-    echo "${BATS_TEST_TMPDIR}"
-    echo "${output}"
-    echo "----------------------------------------"
-  fi
-}
-
-read_env(){
-  # shellcheck disable=SC1090,SC1091
-  [ -f "./.env" ] && t=$(mktemp) && export -p > "$t" && set -a && . "./.env" && set +a && . "$t" && rm "$t" && unset t
-
-  eval echo "${@}"
-}
-
-# Trim the last line of the file.
-trim_file(){
-  local sed_opts
-  sed_opts=(-i) && [ "$(uname)" == "Darwin" ] && sed_opts=(-i '')
-  sed_opts+=(-e '$ d')
-  sed "${sed_opts[@]}" "${1}"
-}
-
-add_var_to_file(){
-  local file="${1}"
-  local name="${2}"
-  local value="${3}"
-
-  local backup=/tmp/bkp/"${file}"
-  mkdir -p "$(dirname "${backup}")"
-
-  cp -f "${file}" "${backup}"
-
-  # shellcheck disable=SC2086
-  echo $name=$value >> "${file}"
-}
-
-restore_file(){
-  local file="${1}"
-  local backup=/tmp/bkp/"${file}"
-
-  cp -f "${backup}" "${file}"
-}
-
-# Run bats with `--tap` option to debug the output.
-debug(){
-  echo "${1}" >&3
 }

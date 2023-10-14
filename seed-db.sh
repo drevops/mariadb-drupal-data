@@ -60,19 +60,19 @@ note() { printf "       %s\n" "$1"; }
 [ "${BASE_IMAGE##*/}" = "$BASE_IMAGE" ] && fail "${BASE_IMAGE} should be in a format myorg/myimage." && exit 1
 [ "${DST_IMAGE##*/}" = "$DST_IMAGE" ] && fail "${DST_IMAGE} should be in a format myorg/myimage." && exit 1
 
-log_container(){
+log_container() {
   mkdir -p "${LOG_DIR}" >/dev/null
-  docker logs "${1}" >> "${LOG_DIR}/${2:-}${1}.log" 2>&1
+  docker logs "${1}" >>"${LOG_DIR}/${2:-}${1}.log" 2>&1
 }
 
-wait_for_db_service(){
+wait_for_db_service() {
   echo -n "       Waiting for the service to become ready."
   docker exec --user 1000 -i "${1}" sh -c "until nc -z localhost 3306; do sleep 1; echo -n .; done; echo"
   log_container "${cid}"
   pass "MYSQL is running."
 }
 
-assert_db_system_tables_present(){
+assert_db_system_tables_present() {
   if docker exec --user 1000 "${1}" /usr/bin/mysql -e "show tables from information_schema;" | grep -q user_variables; then
     pass "Database system tables present."
   else
@@ -81,7 +81,7 @@ assert_db_system_tables_present(){
   fi
 }
 
-assert_db_was_imported(){
+assert_db_was_imported() {
   if docker exec --user 1000 "${1}" /usr/bin/mysql -e "show tables;" | grep -q users; then
     pass "Imported database exists."
   else
@@ -90,24 +90,24 @@ assert_db_was_imported(){
   fi
 }
 
-start_container(){
+start_container() {
   task "Start container from the image ${1}"
   cid=$(docker run -d --rm "${1}" 2>"$LOG_DIR"/container-start.log)
-  cat "${LOG_DIR}"/container-start.log >> "$LOG_DIR/${cid}.log" && rm "${LOG_DIR}"/container-start.log || true
+  cat "${LOG_DIR}"/container-start.log >>"$LOG_DIR/${cid}.log" && rm "${LOG_DIR}"/container-start.log || true
   pass "Started container ${cid}"
   wait_for_db_service "${cid}"
   assert_db_system_tables_present "${cid}"
 }
 
-get_started_container_id(){
+get_started_container_id() {
   docker ps -q --filter ancestor="${1}" --filter status=running | head -n 1
 }
 
-stop_container(){
+stop_container() {
   task "Stop and removing container ${1}"
   # Log container output before stopping it into a separate log file for debugging.
   log_container "${1}" "stopped-"
-  docker stop "${1}" > /dev/null
+  docker stop "${1}" >/dev/null
   pass "Stopped and removed container ${1}"
 }
 
@@ -115,10 +115,10 @@ stop_container(){
 
 info "Started database seeding."
 
-rm -Rf "${LOG_DIR}" > /dev/null
+rm -Rf "${LOG_DIR}" >/dev/null
 mkdir -p "${LOG_DIR}" >/dev/null
 
-rm -Rf "${TMP_DATA_DIR}" > /dev/null
+rm -Rf "${TMP_DATA_DIR}" >/dev/null
 mkdir -p "${TMP_DATA_DIR}" >/dev/null
 
 if [ "$(uname -m)" = "arm64" ]; then

@@ -10,68 +10,6 @@
 
 load _helper
 
-setup(){
-  CUR_DIR="$(pwd)"
-  export CUR_DIR
-  export BUILD_DIR="${BUILD_DIR:-"${BATS_TEST_TMPDIR}/drevops-maria-drupal-data$(random_string)"}"
-
-  export TEST_DOCKER_TAG_PREFIX="bats-test-"
-
-  prepare_fixture_dir "${BUILD_DIR}"
-  copy_code "${BUILD_DIR}"
-
-  if [ "$(uname -m)" = "arm64" ]; then
-    export DOCKER_DEFAULT_PLATFORM=linux/amd64
-  fi
-
-  if [ -n "${DOCKER_DEFAULT_PLATFORM}" ]; then
-    step "Using ${DOCKER_DEFAULT_PLATFORM} platform architecture."
-  fi
-
-  # Due to a limitation in buildx, we are building for a single platform for these tests.
-  export BUILDX_PLATFORMS="${DOCKER_DEFAULT_PLATFORM:-linux/amd64}"
-  export DOCKER_BUILDKIT=1
-
-  # Force full debug output in scripts.
-  # export DREVOPS_DEBUG=1
-
-  pushd "${BUILD_DIR}" > /dev/null || exit 1
-}
-
-teardown(){
-  # Stop and remove all test containers.
-  docker ps --all  --format "{{.ID}}\t{{.Image}}" | grep testorg | awk '{print $1}' | xargs docker rm -f -v
-
-  # Remove all test images.
-  docker images -a | grep "testorg" | awk '{print $3}' | xargs docker rmi -f || true
-
-  popd > /dev/null || cd "${CUR_DIR}" || exit 1
-}
-
-# Print step.
-step(){
-  debug ""
-  # Using prefix different from command prefix in SUT for easy debug.
-  debug "**> STEP: $1"
-}
-
-# Print sub-step.
-substep(){
-  debug ""
-  debug "  > $1"
-}
-
-# Copy source code at the latest commit to the destination directory.
-copy_code(){
-  local dst="${1:-${BUILD_DIR}}"
-  assert_dir_exists "${dst}"
-  assert_git_repo "${CUR_DIR}"
-  pushd "${CUR_DIR}" > /dev/null || exit 1
-  # Copy the latest commit to the build directory.
-  git archive --format=tar HEAD | (cd "${dst}" && tar -xf -)
-  popd > /dev/null || exit 1
-}
-
 @test "Data is preserved in an image captured from running container" {
   tag="${TEST_DOCKER_TAG_PREFIX}$(random_string_lower)"
   # Using a local image for this test.
@@ -155,9 +93,8 @@ copy_code(){
 
   step "Run DB seeding script from base image ${BASE_IMAGE}"
   dst_image="drevops/mariadb-drupal-data-test:${tag}"
-  run ./seed-db.sh "${file}" ${dst_image}
+  run ./seed-db.sh "${file}" "${dst_image}"
   assert_success
-  debug "${output}"
 
   step "Start container from the seeded image ${dst_image}."
   # Start container with a non-root user to imitate limited host permissions.

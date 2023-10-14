@@ -1,24 +1,36 @@
-# MariaDB Database data container
-Allows capturing database data as a Docker layer.
+<p align="center">
+  <a href="" rel="noopener">
+  <img width=200px height=200px src="https://placehold.jp/000000/ffffff/200x200.png?text=Mariadb+Drupal+Data&css=%7B%22border-radius%22%3A%22%20100px%22%7D" alt="Mariadb Drupal data logo"></a>
+</p>
 
+<h1 align="center">MariaDB data container for Drupal with database captured as Docker layers.</h1>
+
+<div align="center">
+
+[![GitHub Issues](https://img.shields.io/github/issues/drevops/mariadb-drupal-data.svg)](https://github.com/drevops/mariadb-drupal-data/issues)
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/drevops/mariadb-drupal-data.svg)](https://github.com/drevops/mariadb-drupal-data/pulls)
 [![CircleCI](https://circleci.com/gh/drevops/mariadb-drupal-data.svg?style=shield)](https://circleci.com/gh/drevops/mariadb-drupal-data)
+[![codecov](https://codecov.io/gh/drevops/mariadb-drupal-data/graph/badge.svg?token=JYSIXUF6QX)](https://codecov.io/gh/drevops/mariadb-drupal-data)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/drevops/mariadb-drupal-data)
 ![LICENSE](https://img.shields.io/github/license/drevops/mariadb-drupal-data)
+![Renovate](https://img.shields.io/badge/renovate-enabled-green?logo=renovatebot)
+
+</div>
 
 ## How it works
 
 Usually, MariaDB uses data directory specified as a Docker volume that is
 mounted onto host: this allows retaining data after container restarts.
 
-The MariaDB image in this project uses custom location `/usr/lib/db-data` (not 
+The MariaDB image in this project uses custom location `/usr/lib/db-data` (not
 a Docker volume) to store expanded database files. These files then can be
-captured as a Docker layer and stored as an image to docker registry. 
+captured as a Docker layer and stored as an image to docker registry.
 
-Image consumers download the image and start containers with instantaneously 
+Image consumers download the image and start containers with instantaneously
 available data (no time-consuming database imports required).
 
-Technically, majority of the functionality is relying on upstream [`amazeeio/mariadb-drupal`](https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb-drupal/10.4.Dockerfile) Docker image. 
-[Entrypoint script](entrypoint.bash) had to be copied from [upstream script](https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb/entrypoints/9999-mariadb-init.bash) and adjusted to support custom data directory.  
+Technically, majority of the functionality is relying on upstream [`amazeeio/mariadb-drupal`](https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb-drupal/10.4.Dockerfile) Docker image.
+[Entrypoint script](entrypoint.bash) had to be copied from [upstream script](https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb/entrypoints/9999-mariadb-init.bash) and adjusted to support custom data directory.
 
 ## Use case
 
@@ -29,10 +41,10 @@ Drupal website with a large database.
 3. CI process tags and pushes image to the Docker registry.
 4. Website developers pull the latest image from the registry and build site locally.
    OR
-   Subsequent CI builds pull the latest image from the registry and build site. 
+   Subsequent CI builds pull the latest image from the registry and build site.
 
-When required, website developers restart docker stack locally with an already 
-imported database, which saves a significant amount of time for database 
+When required, website developers restart docker stack locally with an already
+imported database, which saves a significant amount of time for database
 imports.
 
 ## Seeding image with your database
@@ -51,7 +63,7 @@ In some cases, shell may report platform incorrectly. Run with forced platform:
 ### Running tests
 
     bats tests/bats/data.bats --tap
-    # or  
+    # or
     DOCKER_DEFAULT_PLATFORM=linux/amd64 bats --tap tests/bats/data.bats
 
 ### Publishing

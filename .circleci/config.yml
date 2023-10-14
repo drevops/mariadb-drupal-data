@@ -1,4 +1,8 @@
-version: 2
+version: 2.1
+
+orbs:
+  codecov: codecov/codecov@3.2.4
+
 jobs:
   build:
     docker:
@@ -11,7 +15,9 @@ jobs:
       - checkout
       - run:
           name: Lint scripts
-          command: shellcheck seed-db.sh
+          command: |
+            shfmt -i 2 -ci -s -d seed-db.sh tests/bats/*.bash tests/bats/*.bats
+            shellcheck seed-db.sh tests/bats/*.bash tests/bats/*.bats
       - setup_remote_docker
       - run:
           name: Create Docker builder and install emulators
@@ -26,17 +32,23 @@ jobs:
       - run:
           name: Run Bats tests
           command: |
+            npm --prefix tests/bats ci
             echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin
-            bats tests/bats/data.bats --tap
+            kcov --include-pattern=.sh,.bash --bash-parse-files-in-dir=. --exclude-pattern=vendor,node_modules,coverage $(pwd)/coverage tests/bats/node_modules/.bin/bats tests/bats
+      - store_artifacts:
+          path: coverage
+      - codecov/upload:
+          # @see https://github.com/codecov/codecov-circleci-orb/issues/158
+          xtra_args: "--nonZero -s coverage"
       - run:
           name: Deploy image
           command: |
-            echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin          
+            echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin
             if [ -n "${CIRCLE_TAG}" ]; then
               export TAG="${CIRCLE_TAG}"
             elif [ "${CIRCLE_BRANCH}" != "main" ]; then
               export TAG="$(echo ${CIRCLE_BRANCH} | sed 's/[^a-zA-Z0-9]/-/g')"
-            fi            
+            fi
             DOCKER_BUILDKIT=1 docker buildx build --no-cache --platform "${BUILDX_PLATFORMS}" --tag drevops/mariadb-drupal-data:${TAG:-canary} --push .
 
 workflows:

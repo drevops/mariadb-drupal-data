@@ -15,6 +15,10 @@
 ![LICENSE](https://img.shields.io/github/license/drevops/mariadb-drupal-data)
 ![Renovate](https://img.shields.io/badge/renovate-enabled-green?logo=renovatebot)
 
+[![Docker Pulls](https://img.shields.io/docker/pulls/drevops/mariadb-drupal-data?logo=docker)](https://hub.docker.com/r/drevops/mariadb-drupal-data)
+![amd64](https://img.shields.io/badge/arch-linux%2Famd64-brightgreen)
+![arm64](https://img.shields.io/badge/arch-linux%2Farm64-brightgreen)
+
 </div>
 
 ## How it works

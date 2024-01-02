@@ -43,12 +43,15 @@ jobs:
       - run:
           name: Deploy image
           command: |
-            echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin
             if [ -n "${CIRCLE_TAG}" ]; then
               export TAG="${CIRCLE_TAG}"
+            elif echo "${CIRCLE_BRANCH}" | grep -q "^renovate"; then
+              echo "Skipping deploy for branch ${CIRCLE_BRANCH}"
+              exit 0
             elif [ "${CIRCLE_BRANCH}" != "main" ]; then
               export TAG="$(echo ${CIRCLE_BRANCH} | sed 's/[^a-zA-Z0-9]/-/g')"
             fi
+            echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin
             DOCKER_BUILDKIT=1 docker buildx build --no-cache --platform "${BUILDX_PLATFORMS}" --tag drevops/mariadb-drupal-data:${TAG:-canary} --push .
 
 workflows:
@@ -60,4 +63,4 @@ workflows:
             tags:
               only: /.*/
             branches:
-              only: /^main$|^feature\/[a-zA-z0-9\-\.]+$/
+              only: /^main$|^feature\/[a-zA-z0-9\-\.]+$|^renovate\/.*/

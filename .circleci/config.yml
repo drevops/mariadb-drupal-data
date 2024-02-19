@@ -1,8 +1,5 @@
 version: 2.1
 
-orbs:
-  codecov: codecov/codecov@3.3.0
-
 jobs:
   build:
     docker:
@@ -37,9 +34,9 @@ jobs:
             kcov --include-pattern=.sh,.bash --bash-parse-files-in-dir=. --exclude-pattern=vendor,node_modules,coverage $(pwd)/coverage tests/bats/node_modules/.bin/bats tests/bats
       - store_artifacts:
           path: coverage
-      - codecov/upload:
-          # @see https://github.com/codecov/codecov-circleci-orb/issues/158
-          xtra_args: "--nonZero -s coverage"
+      - run:
+          name: Upload code coverage reports to Codecov
+          command: codecov --fail-on-error -t $CODECOV_TOKEN -s coverage
       - run:
           name: Deploy image
           command: |

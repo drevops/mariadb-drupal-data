@@ -1,15 +1,15 @@
 file:
   /usr/bin/mysql:
     exists: true
-    contains: []
+    contents: []
 
   /usr/bin/mysqld:
     exists: true
-    contains: []
+    contents: []
 
   /var/lib/db-data:
     exists: true
-    contains: []
+    contents: []
 
   /lagoon/entrypoints/00-umask.sh:
     exists: true
@@ -40,7 +40,7 @@ file:
 
   /lagoon/entrypoints/9999-mariadb-init.bash:
     exists: true
-    contains:
+    contents:
       - Entrypoint to start mysql service with custom data directory.
       - This file is minimally modified to be easily updatable from the upstream.
 
@@ -48,7 +48,7 @@ ls /lagoon/entrypoints | wc -l:
   exit-status: 0
   stdout: '10'
   stderr: ''
-  contains: []
+  contents: []
 
 package:
   mariadb:

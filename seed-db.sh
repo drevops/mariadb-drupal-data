@@ -156,10 +156,10 @@ pass "Copied expanded database files to host"
 stop_container "${cid}"
 
 info "Stage 2: Build image"
-docker buildx build --no-cache --platform "linux/amd64" --tag "drevops/mariadb-drupal-data-local:latest" --load .
-task "Build image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s)."
-docker buildx build --no-cache --platform "${DESTINATION_PLATFORMS}" --tag "${DST_IMAGE}" --push -f Dockerfile.seed .
-pass "Built image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s)."
+docker build --no-cache --platform "linux/amd64" --tag "drevops/mariadb-drupal-data-local:latest" .
+task "Build image ${DST_IMAGE} for "linux/amd64" platform(s)."
+docker build --no-cache --platform "linux/amd64" --tag "${DST_IMAGE}" -f Dockerfile.seed .
+pass "Built image ${DST_IMAGE} for "linux/amd64" platform(s)."
 
 info "Stage 3: Test image"
 

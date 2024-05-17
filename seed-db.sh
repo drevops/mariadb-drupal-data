@@ -159,7 +159,7 @@ info "Stage 2: Build image"
 docker build --no-cache --platform "linux/amd64" --tag "drevops/mariadb-drupal-data-local:latest" .
 task "Build image ${DST_IMAGE} for linux/amd64 platform(s)."
 docker build --no-cache --platform "linux/amd64" --tag "${DST_IMAGE}" -f Dockerfile.seed .
-pass "Built image ${DST_IMAGE} for linux/amd64"platform(s)."
+pass "Built image ${DST_IMAGE} for linux/amd64 platform(s)."
 
 info "Stage 3: Test image"
 

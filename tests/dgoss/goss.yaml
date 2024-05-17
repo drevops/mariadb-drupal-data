@@ -59,6 +59,5 @@ user:
   mysql:
     exists: true
 
-process:
-  mysqld:
-    running: true
+ps aux | grep -q mysqld:
+  exit-status: 0

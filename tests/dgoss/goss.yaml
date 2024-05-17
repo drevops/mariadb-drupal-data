@@ -59,5 +59,6 @@ user:
   mysql:
     exists: true
 
-ps aux | grep -q mysqld:
-  exit-status: 0
+command:
+  'ps aux | grep -q mysqld':
+    exit-status: 0

@@ -67,6 +67,7 @@ log_container() {
 
 wait_for_db_service() {
   echo -n "       Waiting for the service to become ready."
+  free -h
   docker exec --user 1000 -i "${1}" sh -c "until nc -z localhost 3306; do sleep 1; echo -n .; done; echo"
   log_container "${cid}"
   pass "MYSQL is running."
@@ -162,7 +163,7 @@ docker buildx build --no-cache --platform "${DESTINATION_PLATFORMS}" --tag "${DS
 pass "Built image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s)."
 
 info "Stage 3: Test image"
-
+free -h
 start_container "${DST_IMAGE}"
 cid="$(get_started_container_id "${DST_IMAGE}")"
 assert_db_was_imported "${cid}"

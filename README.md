@@ -78,3 +78,6 @@ This image is built and pushed automatically to DockerHub:
 3. For `feature/my-branch` branches as `feature-my-branch` tag.
 
 Versions are following versions of the [upstream image](https://hub.docker.com/r/uselagoon/mariadb-drupal/tags) to ease maintenance.
+
+---
+Repository created using https://getscaffold.dev/ project scaffold template

@@ -163,6 +163,5 @@ pass "Built image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s)."
 
 info "Stage 3: Test image"
 
-
 info "Finished database seeding."
 note "https://hub.docker.com/r/${DST_IMAGE%:*}/tags"

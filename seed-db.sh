@@ -34,7 +34,7 @@ BASE_IMAGE="${BASE_IMAGE:-drevops/mariadb-drupal-data:latest}"
 DOCKER_DEFAULT_PLATFORM="${DOCKER_DEFAULT_PLATFORM:-}"
 
 # Destination platforms to build for.
-DESTINATION_PLATFORMS="${DESTINATION_PLATFORMS:-linux/amd64}"
+DESTINATION_PLATFORMS="${DESTINATION_PLATFORMS:-linux/amd64,linux/arm64}"
 
 # Log directory on host to store container logs.
 LOG_DIR="${LOG_DIR:-.logs}"
@@ -156,9 +156,9 @@ pass "Copied expanded database files to host"
 stop_container "${cid}"
 
 info "Stage 2: Build image"
-
+docker buildx build --no-cache --platform "${DESTINATION_PLATFORMS}" --tag "drevops/mariadb-drupal-data:latest" --push .
 task "Build image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s)."
-docker buildx build --no-cache --platform "${DESTINATION_PLATFORMS}" --tag "${DST_IMAGE}" --load -f Dockerfile.seed .
+docker buildx build --no-cache --platform "${DESTINATION_PLATFORMS}" --tag "${DST_IMAGE}" --push -f Dockerfile.seed .
 pass "Built image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s)."
 
 info "Stage 3: Test image"

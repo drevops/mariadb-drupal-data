@@ -72,7 +72,8 @@ setup() {
 
 teardown() {
   # Stop and remove all test containers.
-  local containers=$(docker ps --all --format "{{.ID}}\t{{.Image}}" | grep testorg | awk '{print $1}')
+  local containers
+  containers=$(docker ps --all --format "{{.ID}}\t{{.Image}}" | grep testorg | awk '{print $1}')
   if [ -n "$containers" ]; then
     echo "$containers" | xargs docker rm -f -v
   fi

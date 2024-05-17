@@ -1,4 +1,4 @@
-ARG SEED_IMAGE=drevops/mariadb-drupal-data:latest
+ARG SEED_IMAGE=drevops/mariadb-drupal-data-local:latest
 
 FROM ${SEED_IMAGE}
 

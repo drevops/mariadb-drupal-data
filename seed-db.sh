@@ -156,6 +156,7 @@ pass "Copied expanded database files to host"
 stop_container "${cid}"
 
 info "Stage test test : Build image"
+
 docker build -t drevops/mariadb-drupal-data:latest .
 docker build -t foo-db/mariadb-drupal:latest -f Dockerfile.seed .
 start_container 'foo-db/mariadb-drupal:latest'
@@ -163,7 +164,6 @@ cid="$(get_started_container_id 'foo-db/mariadb-drupal:latest')"
 assert_db_was_imported "${cid}"
 stop_container "${cid}"
 docker image rm drevops/mariadb-drupal-data:latest
-
 
 info "Stage 2: Build image"
 

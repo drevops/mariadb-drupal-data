@@ -72,7 +72,7 @@ setup() {
 
 teardown() {
   # Stop and remove all test containers.
-  docker ps --all --format "{{.ID}}\t{{.Image}}" | grep testorg | awk '{print $1}' | xargs docker rm -f -v
+  docker ps --all --format "{{.ID}}\t{{.Image}}" | grep testorg | awk '{print $1}' | xargs docker rm -f -v || true
 
   # Remove all test images.
   docker images -a | grep "testorg" | awk '{print $3}' | xargs docker rmi -f || true

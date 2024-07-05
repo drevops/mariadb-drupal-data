@@ -58,3 +58,7 @@ package:
 user:
   mysql:
     exists: true
+
+process:
+  mysqld:
+    running: true

@@ -60,5 +60,5 @@ user:
     exists: true
 
 process:
-  mysqld:
+  mariadbd:
     running: true

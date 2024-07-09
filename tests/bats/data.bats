@@ -84,7 +84,7 @@ load _helper
   export BASE_IMAGE="drevops/mariadb-drupal-data-test:base-${tag}"
 
   step "Build fresh image tagged with ${BASE_IMAGE}."
-  docker buildx build --platform "${BUILDX_PLATFORMS}" --no-cache --push -t "${BASE_IMAGE}" .
+  docker buildx build --platform "linux/amd64,linux/arm64" --no-cache --push -t "${BASE_IMAGE}" .
 
   step "Download fixture DB dump."
   file="${BUILD_DIR}/db.sql"

@@ -81,10 +81,10 @@ load _helper
 
 @test "Seeding of the data works" {
   tag="${TEST_DOCKER_TAG_PREFIX}$(random_string_lower)"
-  export BASE_IMAGE="testorg/tesimagebase:${tag}"
+  export BASE_IMAGE="drevops/mariadb-drupal-data-test:base-${tag}"
 
   step "Build fresh image tagged with ${BASE_IMAGE}."
-  docker buildx build --platform "${BUILDX_PLATFORMS}" --load --no-cache -t "${BASE_IMAGE}" .
+  docker buildx build --platform "${BUILDX_PLATFORMS}" --no-cache --push -t "${BASE_IMAGE}" .
 
   step "Download fixture DB dump."
   file="${BUILD_DIR}/db.sql"

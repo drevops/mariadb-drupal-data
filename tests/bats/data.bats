@@ -111,7 +111,7 @@ load _helper
 
   step "Start container from the seeded image ${dst_image} and request an upgrade."
   # Start container with a non-root user to imitate limited host permissions.
-  cid=$(docker run --user 1000 -d -e FORCE_MYSQL_UPGRADE=1 --rm "${dst_image}")
+  cid=$(docker run -d -e FORCE_MYSQL_UPGRADE=1 --rm "${dst_image}")
   substep "Waiting for the service to become ready."
   docker exec -i "${cid}" sh -c "until nc -z localhost 3306; do sleep 1; echo -n .; done; echo"
 

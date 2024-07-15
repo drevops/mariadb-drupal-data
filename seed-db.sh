@@ -158,7 +158,7 @@ stop_container "${cid}"
 info "Stage 2: Build image"
 
 task "Build image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s)."
-docker buildx build --no-cache --platform "${DESTINATION_PLATFORMS}" --tag "${DST_IMAGE}" --push -f Dockerfile.seed .
+docker buildx build --build-arg "SEED_IMAGE=${BASE_IMAGE}" --no-cache --platform "${DESTINATION_PLATFORMS}" --tag "${DST_IMAGE}" --push -f Dockerfile.seed .
 pass "Built image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s)."
 
 info "Stage 3: Test image"

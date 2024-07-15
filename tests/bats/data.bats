@@ -81,10 +81,10 @@ load _helper
 
 @test "Seeding of the data works" {
   tag="${TEST_DOCKER_TAG_PREFIX}$(random_string_lower)"
-  export BASE_IMAGE="testorg/tesimagebase:${tag}"
+  export BASE_IMAGE="drevops/mariadb-drupal-data-test:base-${tag}"
 
   step "Build fresh image tagged with ${BASE_IMAGE}."
-  docker buildx build --platform "${BUILDX_PLATFORMS}" --load --no-cache -t "${BASE_IMAGE}" .
+  docker buildx build --platform "linux/amd64,linux/arm64" --no-cache --push -t "${BASE_IMAGE}" .
 
   step "Download fixture DB dump."
   file="${BUILD_DIR}/db.sql"
@@ -111,7 +111,7 @@ load _helper
 
   step "Start container from the seeded image ${dst_image} and request an upgrade."
   # Start container with a non-root user to imitate limited host permissions.
-  cid=$(docker run --user 1000 -d -e FORCE_MYSQL_UPGRADE=1 --rm "${dst_image}")
+  cid=$(docker run -d -e FORCE_MYSQL_UPGRADE=1 --rm "${dst_image}")
   substep "Waiting for the service to become ready."
   docker exec -i "${cid}" sh -c "until nc -z localhost 3306; do sleep 1; echo -n .; done; echo"
 

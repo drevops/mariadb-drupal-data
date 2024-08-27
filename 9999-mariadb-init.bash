@@ -84,7 +84,10 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
     # @note: Added a flag to force upgrade.
     if [ "${FORCE_MYSQL_UPGRADE:-}" = "1" ]; then
       echo "starting mysql upgrade"
-      mysql_upgrade --force
+      # @note: mariadb-upgrade may fail on the first run due to the unresolved
+      # permissions, but will succeed on the second run.
+      # @see https://mariadb.com/kb/en/mariadb-upgrade/#
+      mariadb-upgrade --force || mariadb-upgrade --force
     fi
 
     if ! kill -s TERM "$pid" || ! wait "$pid"; then

@@ -7,7 +7,7 @@ file:
     exists: true
     contains: []
 
-  /var/lib/db-data:
+  /home/db-data:
     exists: true
     contains: []
 
@@ -54,11 +54,11 @@ package:
   mariadb:
     installed: true
     versions:
-      - 10.4.25-r0
+      - 10.11.6-r0
 user:
   mysql:
     exists: true
 
 process:
-  mysqld:
+  mariadbd:
     running: true

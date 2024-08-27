@@ -2,8 +2,8 @@
 ##
 # Seed image with a database from file.
 #
-# The seeding process has 3-phases build:
-# 1. Create extracted DB files by starting a temporary container and importing database.
+# The seeding process has 3-phases:
+# 1. Create extracted DB files by starting a temporary container and importing the database.
 # 2. Build a new image from the base image and extracted DB files.
 # 3. Start a container from the new image and verify that the database was imported.
 #
@@ -15,7 +15,7 @@
 # shellcheck disable=SC2002,SC2015
 
 set -eu
-[ -n "${DREVOPS_DEBUG:-}" ] && set -x
+[ -n "${DEBUG:-}" ] && set -x
 
 # Database dump file as a first argument to the script.
 DB_FILE="${DB_FILE:-$1}"
@@ -42,11 +42,12 @@ LOG_DIR="${LOG_DIR:-.logs}"
 # Temporary data directory on host.
 TMP_DATA_DIR="${TMP_DATA_DIR:-.data}"
 
+# Show verbose output.
+LOG_IS_VERBOSE="${LOG_IS_VERBOSE:-}"
+
 # ------------------------------------------------------------------------------
 
 # @formatter:off
-#info() { printf "%s\n" "$1"; echo;}
-
 info() { [ -z "${TERM_NO_COLOR:-}" ] && tput colors >/dev/null 2>&1 && printf "\n[\033[36mINFO\033[0m] %s\n\n" "$1" || printf "\n[INFO] %s\n" "$1"; }
 task() { [ -z "${TERM_NO_COLOR:-}" ] && tput colors >/dev/null 2>&1 && printf "[\033[34mTASK\033[0m] %s\n" "$1" || printf "[TASK] %s\n" "$1"; }
 pass() { [ -z "${TERM_NO_COLOR:-}" ] && tput colors >/dev/null 2>&1 && printf "[ \033[32mOK\033[0m ] %s\n" "$1" || printf "[ OK ] %s\n" "$1"; }
@@ -60,20 +61,61 @@ note() { printf "       %s\n" "$1"; }
 [ "${BASE_IMAGE##*/}" = "$BASE_IMAGE" ] && fail "${BASE_IMAGE} should be in a format myorg/myimage." && exit 1
 [ "${DST_IMAGE##*/}" = "$DST_IMAGE" ] && fail "${DST_IMAGE} should be in a format myorg/myimage." && exit 1
 
+# Collect logs and display them on script exit.
+cleanup() {
+  if [ $? -ne 0 ]; then
+    fail "Collecting logs after failure."
+    if [ -d "${LOG_DIR}" ] && [ -z "${LOG_IS_VERBOSE}" ]; then
+      for log_file in "${LOG_DIR}"/*.log; do
+        echo
+        note "--- Displaying ${log_file} ---"
+        echo
+        cat "${log_file}"
+        echo
+      done
+    else
+      note "No logs available to display."
+    fi
+  fi
+}
+
+trap cleanup EXIT
+
 log_container() {
+  name="${1?Missing log name}"
+  prefix=${2:-}
+
   mkdir -p "${LOG_DIR}" >/dev/null
-  docker logs "${1}" >>"${LOG_DIR}/${2:-}${1}.log" 2>&1
+  log_file="${LOG_DIR}/${prefix}${name}.log"
+
+  if [ -n "${LOG_IS_VERBOSE}" ]; then
+    docker logs "${1}" | tee -a "${log_file}"
+  else
+    docker logs "${1}" &>>"${log_file}"
+  fi
 }
 
 wait_for_db_service() {
+  cid="${1}"
+
+  user=()
+  [ -n "${2-}" ] && user=("--user=${2}")
+
   echo -n "       Waiting for the service to become ready."
-  docker exec --user 1000 -i "${1}" sh -c "until nc -z localhost 3306; do sleep 1; echo -n .; done; echo"
+  if ! docker exec "${user[@]}" -i "${cid}" sh -c "until nc -z localhost 3306; do sleep 1; echo -n .; done; echo"; then
+    fail "MYSQL service did not start successfully."
+    log_container "${cid}"
+    return 1
+  fi
   log_container "${cid}"
   pass "MYSQL is running."
 }
 
 assert_db_system_tables_present() {
-  if docker exec --user 1000 "${1}" /usr/bin/mysql -e "show tables from information_schema;" | grep -q user_variables; then
+  user=()
+  [ -n "${2-}" ] && user=("--user=${2}")
+
+  if docker exec "${user[@]}" "${1}" /usr/bin/mysql -e "show tables from information_schema;" | grep -q user_variables; then
     pass "Database system tables present."
   else
     pass "Database system tables are not present in container ${1}"
@@ -82,7 +124,10 @@ assert_db_system_tables_present() {
 }
 
 assert_db_was_imported() {
-  if docker exec --user 1000 "${1}" /usr/bin/mysql -e "show tables;" | grep -q users; then
+  user=()
+  [ -n "${2-}" ] && user=("--user=${2}")
+
+  if docker exec "${user[@]}" "${1}" /usr/bin/mysql -e "show tables;" | grep -q users; then
     pass "Imported database exists."
   else
     fail "Imported database does not exist in container ${1}"
@@ -92,11 +137,17 @@ assert_db_was_imported() {
 
 start_container() {
   task "Start container from the image ${1}"
-  cid=$(docker run -d --rm "${1}" 2>"$LOG_DIR"/container-start.log)
+
+  user=()
+  [ -n "${2-}" ] && user=("--user=${2}")
+
+  cid=$(docker run "${user[@]}" -d "${1}" 2>"$LOG_DIR"/container-start.log)
   cat "${LOG_DIR}"/container-start.log >>"$LOG_DIR/${cid}.log" && rm "${LOG_DIR}"/container-start.log || true
+
+  wait_for_db_service "${cid}" "${2-}"
+  assert_db_system_tables_present "${cid}" "${2-}"
+
   pass "Started container ${cid}"
-  wait_for_db_service "${cid}"
-  assert_db_system_tables_present "${cid}"
 }
 
 get_started_container_id() {
@@ -104,7 +155,7 @@ get_started_container_id() {
 }
 
 stop_container() {
-  task "Stop and removing container ${1}"
+  task "Stop and remove container ${1}"
   # Log container output before stopping it into a separate log file for debugging.
   log_container "${1}" "stopped-"
   docker stop "${1}" >/dev/null
@@ -134,7 +185,7 @@ fi
 note "Destination image: ${DST_IMAGE}"
 note "Destination platform(s): ${DESTINATION_PLATFORMS}"
 
-info "Stage 1: Produce database structure files from dump"
+info "Stage 1: Produce database structure files from dump file"
 
 start_container "${BASE_IMAGE}"
 cid="$(get_started_container_id "${BASE_IMAGE}")"
@@ -152,12 +203,12 @@ assert_db_was_imported "${cid}"
 pass "Upgraded database after import."
 
 task "Update permissions on the seeded database files."
-docker exec "${cid}" bash -c "chown -R mysql /var/lib/db-data && /bin/fix-permissions /var/lib/db-data" || true
+docker exec "${cid}" bash -c "chown -R mysql /home/db-data && /bin/fix-permissions /home/db-data" || true
 pass "Updated permissions on the seeded database files."
 
 task "Copy expanded database files to host"
 mkdir -p "${TMP_DATA_DIR}"
-docker cp "${cid}":/var/lib/db-data/. "${TMP_DATA_DIR}/"
+docker cp "${cid}":/home/db-data/. "${TMP_DATA_DIR}/" >/dev/null
 [ ! -d "${TMP_DATA_DIR}/mysql" ] && fail "Unable to copy expanded database files to host " && ls -al "${TMP_DATA_DIR}" && exit 1
 pass "Copied expanded database files to host"
 
@@ -165,15 +216,15 @@ stop_container "${cid}"
 
 info "Stage 2: Build image"
 
-task "Build image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s)."
-docker buildx build --no-cache --platform "${DESTINATION_PLATFORMS}" --tag "${DST_IMAGE}" --push -f Dockerfile.seed .
-pass "Built image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s)."
+task "Build image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s) from ${BASE_IMAGE}."
+docker buildx build --no-cache --build-arg="BASE_IMAGE=${BASE_IMAGE}" --platform "${DESTINATION_PLATFORMS}" --tag "${DST_IMAGE}" --push -f Dockerfile.seed .
+pass "Built image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s) from ${BASE_IMAGE}."
 
 info "Stage 3: Test image"
 
-start_container "${DST_IMAGE}"
+start_container "${DST_IMAGE}" 1000
 cid="$(get_started_container_id "${DST_IMAGE}")"
-assert_db_was_imported "${cid}"
+assert_db_was_imported "${cid}" 1000
 stop_container "${cid}"
 
 info "Finished database seeding."

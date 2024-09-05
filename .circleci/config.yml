@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: drevops/ci-runner:24.8.0
+      - image: drevops/ci-runner:24.9.0
         environment:
           BUILDX_VERSION: v0.10.4
           BUILDX_PLATFORMS: linux/amd64,linux/arm64,linux/arm/v7

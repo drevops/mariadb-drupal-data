@@ -66,9 +66,8 @@ In some cases, shell may report platform incorrectly. Run with forced platform:
 
 ### Running tests
 
-    tests/bats/node_modules/.bin/bats tests/bats/data.bats --tap
-    # or
-    DOCKER_DEFAULT_PLATFORM=linux/amd64 tests/bats/node_modules/.bin/bats --tap tests/bats/data.bats
+    tests/bats/node_modules/.bin/bats tests/bats/image.bats --tap
+    tests/bats/node_modules/.bin/bats tests/bats/seed.bats --tap
 
 ### Publishing
 

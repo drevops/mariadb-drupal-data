@@ -52,6 +52,9 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
     chown -R mysql:mysql /run/mysqld
   fi
 
+  MARIADB_INIT_WAIT_SECONDS=${MARIADB_INIT_WAIT_SECONDS:-30}
+  MARIADB_INIT_PERIOD_SECONDS=${MARIADB_INIT_PERIOD_SECONDS:-1}
+
   # @note: If data dir exists and is not empty - most likely the DB has
   # already been initialised.
   if [ -d ${MARIADB_DATA_DIR:-/var/lib/mysql} ] && [ "$(ls -A "${MARIADB_DATA_DIR:-/var/lib/mysql}")" ]; then
@@ -70,12 +73,12 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
     pid="$!"
     echo "pid is $pid"
 
-    for i in {30..0}; do
+    for i in $(seq 0 $MARIADB_INIT_WAIT_SECONDS); do
       if echo 'SELECT 1' | mysql -u root; then
         break
       fi
       echo 'MySQL init process in progress...'
-      sleep 1
+      sleep $MARIADB_INIT_PERIOD_SECONDS
     done
 
     # @note: Added a flag to force upgrade.
@@ -98,12 +101,12 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
     pid="$!"
     echo "pid is $pid"
 
-    for i in {30..0}; do
+    for i in $(seq 0 $MARIADB_INIT_WAIT_SECONDS); do
       if echo 'SELECT 1' | mysql -u root; then
         break
       fi
       echo 'MySQL init process in progress...'
-      sleep 1
+      sleep $MARIADB_INIT_PERIOD_SECONDS
     done
 
     if [ "$MARIADB_ROOT_PASSWORD" = "" ]; then
@@ -124,6 +127,8 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 DROP DATABASE IF EXISTS test;
 USE mysql;
 ALTER USER root@localhost IDENTIFIED VIA mysql_native_password USING PASSWORD("$MARIADB_ROOT_PASSWORD");
+DELETE FROM global_priv WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+DELETE FROM proxies_priv WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
 FLUSH PRIVILEGES;
 
 EOF
@@ -148,13 +153,14 @@ EOF
     echo "[mysql]" >> ${MARIADB_DATA_DIR:-/var/lib/mysql}/.my.cnf
     echo "database=${MARIADB_DATABASE}" >> ${MARIADB_DATA_DIR:-/var/lib/mysql}/.my.cnf
 
-    for f in `ls /docker-entrypoint-initdb.d/*`; do
-      case "$f" in
-        *.sh)     echo "$0: running $f"; . "$f" ;;
-        *.sql)    echo "$0: running $f"; cat $f| envsubst | tee | mysql -u root -p${MARIADB_ROOT_PASSWORD}; echo ;;
-        *)        echo "$0: ignoring $f" ;;
-      esac
-    echo
+    for f in /docker-entrypoint-initdb.d/*; do
+      if [ -e "$f" ]; then
+        case "$f" in
+          *.sh)     echo "$0: running $f"; . "$f" ;;
+          *.sql)    echo "$0: running $f"; cat $f| envsubst | tee | mysql -u root -p${MARIADB_ROOT_PASSWORD}; echo ;;
+          *)        echo "$0: ignoring $f" ;;
+        esac
+      fi
     done
 
     if ! kill -s TERM "$pid" || ! wait "$pid"; then
@@ -165,6 +171,7 @@ EOF
   fi
 
   echo "done, now starting daemon"
+  touch /tmp/mariadb-init-complete
 
 fi
 # LCOV_EXCL_END

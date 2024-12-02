@@ -18,8 +18,8 @@ jobs:
       - run:
           name: Lint scripts
           command: |
-            shfmt -i 2 -ci -s -d seed-db.sh tests/bats/*.bash tests/bats/*.bats
-            shellcheck seed-db.sh tests/bats/*.bash tests/bats/*.bats
+            shfmt -i 2 -ci -s -d seed.sh tests/bats/*.bash tests/bats/*.bats
+            shellcheck seed.sh tests/bats/*.bash tests/bats/*.bats
 
       - setup_remote_docker
 

@@ -8,9 +8,9 @@
 # 3. Start a container from the new image and verify that the database was imported.
 #
 # Usage:
-# ./seed-db.sh path/to/db.sql myorg/myimage:latest
+# ./seed.sh path/to/db.sql myorg/myimage:latest
 #
-# DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed-db.sh path/to/db.sql myorg/myimage:latest
+# DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
 #
 # shellcheck disable=SC2002,SC2015
 
@@ -30,7 +30,7 @@ BASE_IMAGE="${BASE_IMAGE:-drevops/mariadb-drupal-data:latest}"
 
 # Docker target platform architecture.
 # Note that some shells report platform incorrectly. In such cases, run
-# as `DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed-db.sh path/to/db.sql myorg/myimage:latest`
+# as `DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest`
 DOCKER_DEFAULT_PLATFORM="${DOCKER_DEFAULT_PLATFORM:-}"
 
 # Destination platforms to build for.

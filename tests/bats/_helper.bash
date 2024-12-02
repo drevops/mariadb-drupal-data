@@ -50,16 +50,13 @@ setup() {
   fi
   # LCOV_EXCL_END
 
-  if [ "$(uname -m)" = "arm64" ]; then
-    export DOCKER_DEFAULT_PLATFORM=linux/amd64
-  fi
+  export DOCKER_DEFAULT_PLATFORM="${DOCKER_DEFAULT_PLATFORM:-linux/amd64}"
+  step "Using ${DOCKER_DEFAULT_PLATFORM} platform architecture."
 
-  if [ -n "${DOCKER_DEFAULT_PLATFORM-}" ]; then
-    step "Using ${DOCKER_DEFAULT_PLATFORM} platform architecture."
-  fi
-
-  # Due to a limitation in buildx, we are building for a single platform for these tests.
+  # Due to a limitation in buildx driver to build multi-platform images in some
+  # OSes (like MacOS), we are building for a single platform by default.
   export BUILDX_PLATFORMS="${DOCKER_DEFAULT_PLATFORM:-linux/amd64}"
+  step "Building for ${BUILDX_PLATFORMS} platforms."
   export DOCKER_BUILDKIT=1
 
   export TEST_DOCKER_TAG_PREFIX="bats-test-"

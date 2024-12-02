@@ -15,9 +15,11 @@ ENV MARIADB_DATA_DIR=/home/db-data
 # Add customised entrypoint script.
 COPY 9999-mariadb-init.bash /lagoon/entrypoints/
 
-# Create the custom data directory and set permissions.
 USER root
 
+RUN apk update && apk upgrade --no-cache
+
+# Create the custom data directory and set permissions.
 RUN mkdir -p /home/db-data \
     && chown -R mysql:mysql /home/db-data \
     && /bin/fix-permissions /home/db-data

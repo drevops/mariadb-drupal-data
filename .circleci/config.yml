@@ -58,14 +58,17 @@ jobs:
           command: |
             if [ -n "${CIRCLE_TAG}" ]; then
               export TAG="${CIRCLE_TAG}"
+              export TAG_LATEST="latest"
             elif echo "${CIRCLE_BRANCH}" | grep -q "^renovate"; then
               echo "Skipping deploy for branch ${CIRCLE_BRANCH}"
               exit 0
             elif [ "${CIRCLE_BRANCH}" != "main" ]; then
               export TAG="$(echo ${CIRCLE_BRANCH} | sed 's/[^a-zA-Z0-9]/-/g')"
             fi
+            export TAG="drevops/mariadb-drupal-data:${TAG:-canary}"
+            [ -n "${TAG_LATEST}" ] && export TAG_LATEST="drevops/mariadb-drupal-data:${TAG_LATEST}"
             echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin
-            DOCKER_BUILDKIT=1 docker buildx build --no-cache --platform "${BUILDX_PLATFORMS}" --tag drevops/mariadb-drupal-data:${TAG:-canary} --push .
+            DOCKER_BUILDKIT=1 docker buildx build --no-cache --platform "${BUILDX_PLATFORMS}" --tag "${TAG}" ${TAG_LATEST-} --push .
 
 workflows:
   version: 2

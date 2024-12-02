@@ -6,8 +6,8 @@ jobs:
       - image: drevops/ci-runner:24.11.0
         environment:
           BUILDX_VERSION: v0.10.4
-          BUILDX_PLATFORMS: linux/amd64,linux/arm64,linux/arm/v7
     working_directory: /root/project
+
     steps:
       - checkout
       - run:
@@ -39,6 +39,8 @@ jobs:
           command: codecov --fail-on-error -t $CODECOV_TOKEN -s coverage
       - run:
           name: Deploy image
+          environment:
+            BUILDX_PLATFORMS: linux/amd64,linux/arm64
           command: |
             if [ -n "${CIRCLE_TAG}" ]; then
               export TAG="${CIRCLE_TAG}"

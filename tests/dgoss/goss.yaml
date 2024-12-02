@@ -7,7 +7,7 @@ file:
     exists: true
     contains: []
 
-  /var/lib/db-data:
+  /home/db-data:
     exists: true
     contains: []
 

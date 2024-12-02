@@ -25,7 +25,7 @@ load _helper
   substep "Started container ${cid}"
 
   step "Assert that the database directory is present."
-  docker exec --user 1000 "${cid}" test -d /var/lib/db-data
+  docker exec --user 1000 "${cid}" test -d /home/db-data
 
   step "Wait for mysql to start."
   sleep 5

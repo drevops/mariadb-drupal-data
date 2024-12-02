@@ -152,12 +152,12 @@ assert_db_was_imported "${cid}"
 pass "Upgraded database after import."
 
 task "Update permissions on the seeded database files."
-docker exec "${cid}" bash -c "chown -R mysql /var/lib/db-data && /bin/fix-permissions /var/lib/db-data" || true
+docker exec "${cid}" bash -c "chown -R mysql /home/db-data && /bin/fix-permissions /home/db-data" || true
 pass "Updated permissions on the seeded database files."
 
 task "Copy expanded database files to host"
 mkdir -p "${TMP_DATA_DIR}"
-docker cp "${cid}":/var/lib/db-data/. "${TMP_DATA_DIR}/"
+docker cp "${cid}":/home/db-data/. "${TMP_DATA_DIR}/"
 [ ! -d "${TMP_DATA_DIR}/mysql" ] && fail "Unable to copy expanded database files to host " && ls -al "${TMP_DATA_DIR}" && exit 1
 pass "Copied expanded database files to host"
 

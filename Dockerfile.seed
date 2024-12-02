@@ -5,12 +5,12 @@ FROM ${SEED_IMAGE}
 # Data directory to copy from.
 ARG SRC_DATADIR=.data
 
-COPY ${SRC_DATADIR} /var/lib/db-data/
+COPY ${SRC_DATADIR} /home/db-data/
 
 USER root
 
-RUN chown -R mysql /var/lib/db-data \
-    && chgrp -R mysql /var/lib/db-data \
-    && /bin/fix-permissions /var/lib/db-data
+RUN chown -R mysql /home/db-data \
+    && chgrp -R mysql /home/db-data \
+    && /bin/fix-permissions /home/db-data
 
 USER mysql

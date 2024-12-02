@@ -1,44 +1,58 @@
 version: 2.1
 
-jobs:
-  build:
-    docker:
+executors:
+  default:
+      docker:
       - image: drevops/ci-runner:24.11.0
         environment:
           BUILDX_VERSION: v0.10.4
+
+jobs:
+  build:
+    executor: default
     working_directory: /root/project
 
     steps:
       - checkout
+
       - run:
           name: Lint scripts
           command: |
             shfmt -i 2 -ci -s -d seed-db.sh tests/bats/*.bash tests/bats/*.bats
             shellcheck seed-db.sh tests/bats/*.bash tests/bats/*.bats
+
       - setup_remote_docker
+
       - run:
           name: Create Docker builder and install emulators
           command: |
             docker buildx create --name multiarch --driver docker-container --use
             docker run -it --rm --privileged tonistiigi/binfmt --install all
+
       - run:
           name: Run Goss tests
           command: |
             docker build -t gosstestorg/gosstestimage:goss-test-tag .
             GOSS_FILES_PATH=tests/dgoss dgoss run -i gosstestorg/gosstestimage:goss-test-tag
+
       - run:
           name: Run Bats tests
           command: |
             npm --prefix tests/bats ci
             echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin
             kcov --include-pattern=.sh,.bash --bash-parse-files-in-dir=. --exclude-pattern=vendor,node_modules,coverage $(pwd)/coverage tests/bats/node_modules/.bin/bats tests/bats
+
       - store_artifacts:
           path: coverage
+
       - run:
           name: Upload code coverage reports to Codecov
           command: codecov --fail-on-error -t $CODECOV_TOKEN -s coverage
+
+      # Keeping the 'publish' step within the 'build' job to test that buildx
+      # can successfully build multi-arch images.
       - run:
-          name: Deploy image
+          name: Publish image
           environment:
             BUILDX_PLATFORMS: linux/amd64,linux/arm64
           command: |

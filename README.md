@@ -26,7 +26,7 @@
 Usually, MariaDB uses data directory specified as a Docker volume that is
 mounted onto host: this allows retaining data after container restarts.
 
-The MariaDB image in this project uses custom location `/usr/lib/db-data` (not
+The MariaDB image in this project uses custom location `/home/db-data` (not
 a Docker volume) to store expanded database files. These files then can be
 captured as a Docker layer and stored as an image to docker registry.
 
@@ -34,7 +34,7 @@ Image consumers download the image and start containers with instantaneously
 available data (no time-consuming database imports required).
 
 Technically, majority of the functionality is relying on upstream [`uselagoon/mariadb-drupal`](https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb-drupal/10.11.Dockerfile) Docker image.
-[Entrypoint script](entrypoint.bash) had to be copied from [upstream script](https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb/entrypoints/9999-mariadb-init.bash) and adjusted to support custom data directory.
+[Entrypoint script](9999-mariadb-init.bash)) had to be copied from [upstream script](https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb/entrypoints/9999-mariadb-init.bash) and adjusted to support custom data directory.
 
 ## Use case
 
@@ -53,14 +53,19 @@ imports.
 
 ## Seeding image with your database
 
-`./seed-db.sh` allows to easily create your own image with "seeded" database.
+`./seed-db.sh` allows to easily create your own image with a "seeded" database.
 
-1. `./seed-db.sh path/to/db.sql myorg/myimage:latest`
-2. `docker push myorg/myimage:latest`
+```shell
+./seed-db.sh path/to/db.sql myorg/myimage:latest  # Build and push an image to the registry
+```
 
 In some cases, shell may report platform incorrectly. Run with forced platform:
 
-    DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed-db.sh path/to/db.sql myorg/myimage:latest
+```shell
+DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed-db.sh path/to/db.sql myorg/myimage:latest
+```
+
+Note that you should already be logged in to the registry as `seed-db.sh` will be pushing an image.
 
 ## Maintenance
 

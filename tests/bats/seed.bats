@@ -39,7 +39,7 @@ load _helper
   # from the seeding process.
   export DESTINATION_PLATFORMS="${BUILDX_PLATFORMS}"
   substep "Run DB seeding script for ${dst_image} from the base image ${BASE_IMAGE} for destination platform(s) ${DESTINATION_PLATFORMS}."
-  ./seed-db.sh "${file}" "${dst_image}" >&3
+  ./seed.sh "${file}" "${dst_image}" >&3
 
   substep "Start container from the seeded image ${dst_image}."
   # Start container with a non-root user to imitate limited host permissions.

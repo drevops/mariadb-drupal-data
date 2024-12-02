@@ -53,19 +53,19 @@ imports.
 
 ## Seeding image with your database
 
-`./seed-db.sh` allows to easily create your own image with a "seeded" database.
+`./seed.sh` allows to easily create your own image with a "seeded" database.
 
 ```shell
-./seed-db.sh path/to/db.sql myorg/myimage:latest  # Build and push an image to the registry
+./seed.sh path/to/db.sql myorg/myimage:latest  # Build and push an image to the registry
 ```
 
 In some cases, shell may report platform incorrectly. Run with forced platform:
 
 ```shell
-DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed-db.sh path/to/db.sql myorg/myimage:latest
+DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
 ```
 
-Note that you should already be logged in to the registry as `seed-db.sh` will be pushing an image.
+Note that you should already be logged in to the registry as `seed.sh` will be pushing an image.
 
 ## Maintenance
 

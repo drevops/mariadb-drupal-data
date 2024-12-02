@@ -39,8 +39,8 @@ DESTINATION_PLATFORMS="${DESTINATION_PLATFORMS:-linux/amd64,linux/arm64}"
 # Log directory on host to store container logs.
 LOG_DIR="${LOG_DIR:-.logs}"
 
-# Temporary data directory on host.
-TMP_DATA_DIR="${TMP_DATA_DIR:-.data}"
+# Temporary database structure directory on host.
+TMP_STRUCTURE_DIR="${TMP_STRUCTURE_DIR:-.db-structure}"
 
 # Show verbose output.
 LOG_IS_VERBOSE="${LOG_IS_VERBOSE:-}"
@@ -169,8 +169,8 @@ info "Started database seeding."
 rm -Rf "${LOG_DIR}" >/dev/null
 mkdir -p "${LOG_DIR}" >/dev/null
 
-rm -Rf "${TMP_DATA_DIR}" >/dev/null
-mkdir -p "${TMP_DATA_DIR}" >/dev/null
+rm -Rf "${TMP_STRUCTURE_DIR}" >/dev/null
+mkdir -p "${TMP_STRUCTURE_DIR}" >/dev/null
 
 if [ "$(uname -m)" = "arm64" ]; then
   export DOCKER_DEFAULT_PLATFORM=linux/amd64
@@ -211,9 +211,9 @@ docker exec "${cid}" bash -c "chown -R mysql /home/db-data && /bin/fix-permissio
 pass "Updated permissions on the seeded database files."
 
 task "Copy expanded database files to host"
-mkdir -p "${TMP_DATA_DIR}"
-docker cp "${cid}":/home/db-data/. "${TMP_DATA_DIR}/" >/dev/null
-[ ! -d "${TMP_DATA_DIR}/mysql" ] && fail "Unable to copy expanded database files to host " && ls -al "${TMP_DATA_DIR}" && exit 1
+mkdir -p "${TMP_STRUCTURE_DIR}"
+docker cp "${cid}":/home/db-data/. "${TMP_STRUCTURE_DIR}/" >/dev/null
+[ ! -d "${TMP_STRUCTURE_DIR}/mysql" ] && fail "Unable to copy expanded database files to host " && ls -al "${TMP_STRUCTURE_DIR}" && exit 1
 pass "Copied expanded database files to host"
 
 stop_container "${cid}"
@@ -224,7 +224,7 @@ task "Build image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s) from ${B
 cat <<EOF | docker buildx build --no-cache --build-arg="BASE_IMAGE=${BASE_IMAGE}" --platform "${DESTINATION_PLATFORMS}" --tag "${DST_IMAGE}" --push -f - .
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
-COPY --chown=mysql:mysql .data /home/db-data/
+COPY --chown=mysql:mysql ${TMP_STRUCTURE_DIR} /home/db-data/
 USER root
 RUN /bin/fix-permissions /home/db-data
 USER mysql

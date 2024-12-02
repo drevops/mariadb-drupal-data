@@ -187,6 +187,10 @@ note "Destination platform(s): ${DESTINATION_PLATFORMS}"
 
 info "Stage 1: Produce database structure files from dump file"
 
+task "Pulling the base image ${BASE_IMAGE}."
+docker pull "${BASE_IMAGE}"
+pass "Pulled the base image ${BASE_IMAGE}."
+
 start_container "${BASE_IMAGE}"
 cid="$(get_started_container_id "${BASE_IMAGE}")"
 
@@ -217,7 +221,14 @@ stop_container "${cid}"
 info "Stage 2: Build image"
 
 task "Build image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s) from ${BASE_IMAGE}."
-docker buildx build --no-cache --build-arg="BASE_IMAGE=${BASE_IMAGE}" --platform "${DESTINATION_PLATFORMS}" --tag "${DST_IMAGE}" --push -f Dockerfile.seed .
+cat <<EOF | docker buildx build --no-cache --build-arg="BASE_IMAGE=${BASE_IMAGE}" --platform "${DESTINATION_PLATFORMS}" --tag "${DST_IMAGE}" --push -f - .
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+COPY --chown=mysql:mysql .data /home/db-data/
+USER root
+RUN /bin/fix-permissions /home/db-data
+USER mysql
+EOF
 pass "Built image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s) from ${BASE_IMAGE}."
 
 info "Stage 3: Test image"

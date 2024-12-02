@@ -143,6 +143,14 @@ task "Import database from the ${DB_FILE} file."
 cat "${DB_FILE}" | docker exec -i "${cid}" /usr/bin/mysql
 assert_db_was_imported "${cid}"
 
+task "Upgrade database after import."
+docker exec "${cid}" /usr/bin/mysql -e "FLUSH TABLES WITH READ LOCK;"
+docker exec "${cid}" /usr/bin/mysql -e "UNLOCK TABLES;"
+docker exec "${cid}" bash -c "mysql_upgrade --force"
+docker exec "${cid}" /usr/bin/mysql -e "FLUSH TABLES WITH READ LOCK;"
+assert_db_was_imported "${cid}"
+pass "Upgraded database after import."
+
 task "Update permissions on the seeded database files."
 docker exec "${cid}" bash -c "chown -R mysql /var/lib/db-data && /bin/fix-permissions /var/lib/db-data" || true
 pass "Updated permissions on the seeded database files."

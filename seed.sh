@@ -76,6 +76,16 @@ cleanup() {
     else
       note "No logs available to display."
     fi
+
+    if [ -f ".dockerignore.bak" ]; then
+      note "Restoring .dockerignore from .dockerignore.bak"
+      mv .dockerignore.bak .dockerignore
+      if [ ! -f ".dockerignore" ]; then
+        fail "Unable to restore .dockerignore from .dockerignore.bak"
+        exit 1
+      fi
+      pass "Restored .dockerignore from .dockerignore.bak"
+    fi
   fi
 }
 
@@ -185,6 +195,16 @@ fi
 note "Destination image: ${DST_IMAGE}"
 note "Destination platform(s): ${DESTINATION_PLATFORMS}"
 
+if [ -f ".dockerignore" ]; then
+  note "Moving .dockerignore to .dockerignore.bak"
+  mv .dockerignore .dockerignore.bak
+  if [ ! -f ".dockerignore.bak" ]; then
+    fail "Unable to move .dockerignore to .dockerignore.bak"
+    exit 1
+  fi
+  pass "Moved .dockerignore to .dockerignore.bak"
+fi
+
 info "Stage 1: Produce database structure files from dump file"
 
 task "Pulling the base image ${BASE_IMAGE}."
@@ -237,6 +257,16 @@ start_container "${DST_IMAGE}" 1000
 cid="$(get_started_container_id "${DST_IMAGE}")"
 assert_db_was_imported "${cid}" 1000
 stop_container "${cid}"
+
+if [ -f ".dockerignore.bak" ]; then
+  note "Restoring .dockerignore from .dockerignore.bak"
+  mv .dockerignore.bak .dockerignore
+  if [ ! -f ".dockerignore" ]; then
+    fail "Unable to restore .dockerignore from .dockerignore.bak"
+    exit 1
+  fi
+  pass "Restored .dockerignore from .dockerignore.bak"
+fi
 
 info "Finished database seeding."
 note "https://hub.docker.com/r/${DST_IMAGE%:*}/tags"

@@ -55,7 +55,7 @@ imports.
 
 1. Download the `seed.sh` script from this repository:
 ```shell
-curl -O https://github.com/drevops/mariadb-drupal-data/releases/latest/download/seed.sh
+curl -LO https://github.com/drevops/mariadb-drupal-data/releases/latest/download/seed.sh
 chmod +x seed.sh
 ```
 2. Run the script with the path to your database dump and the image name:

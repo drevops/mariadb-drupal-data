@@ -63,14 +63,17 @@ chmod +x seed.sh
 ```shell
 ./seed.sh path/to/db.sql myorg/myimage:latest
 
-# or with forced platform
+# with forced platform
 DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
 
 # for multi-platform image
 DESTINATION_PLATFORMS=linux/amd64,linux/arm64 ./seed.sh path/to/db.sql myorg/myimage:latest
+
+# with a custom base image (e.g., canary)
+BASE_IMAGE=drevops/mariadb-drupal-data:canary ./seed.sh path/to/db.sql myorg/myimage:latest
 ```
 
-Note that you should already be logged in to the registry as `seed.sh` will be pushing an image.
+Note that you should already be logged in to the registry as `seed.sh` will be pushing an image as a part of `docker buildx` process.
 
 ## Maintenance
 

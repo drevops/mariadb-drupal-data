@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 ##
 # Seed image with a database from file.
+# @see https://github.com/drevops/mariadb-drupal-data/blob/main/seed.sh
 #
 # The seeding process has 3-phases:
 # 1. Create extracted DB files by starting a temporary container and importing the database.
@@ -34,7 +35,7 @@ BASE_IMAGE="${BASE_IMAGE:-drevops/mariadb-drupal-data:latest}"
 DOCKER_DEFAULT_PLATFORM="${DOCKER_DEFAULT_PLATFORM:-}"
 
 # Destination platforms to build for.
-DESTINATION_PLATFORMS="${DESTINATION_PLATFORMS:-linux/amd64,linux/arm64}"
+DESTINATION_PLATFORMS="${DESTINATION_PLATFORMS:-linux/amd64}"
 
 # Log directory on host to store container logs.
 LOG_DIR="${LOG_DIR:-.logs}"

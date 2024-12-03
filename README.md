@@ -53,16 +53,21 @@ imports.
 
 ## Seeding image with your database
 
-`./seed.sh` allows to easily create your own image with a "seeded" database.
-
+1. Download the `seed.sh` script from this repository:
 ```shell
-./seed.sh path/to/db.sql myorg/myimage:latest  # Build and push an image to the registry
+curl -O https://github.com/drevops/mariadb-drupal-data/releases/latest/download/seed.sh
+chmod +x seed.sh
 ```
-
-In some cases, shell may report platform incorrectly. Run with forced platform:
+2. Run the script with the path to your database dump and the image name:
 
 ```shell
+./seed.sh path/to/db.sql myorg/myimage:latest
+
+# or with forced platform
 DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
+
+# for multi-platform image
+DESTINATION_PLATFORMS=linux/amd64,linux/arm64 ./seed.sh path/to/db.sql myorg/myimage:latest
 ```
 
 Note that you should already be logged in to the registry as `seed.sh` will be pushing an image.

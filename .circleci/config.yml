@@ -3,7 +3,7 @@ version: 2.1
 executors:
   default:
     docker:
-      - image: drevops/ci-runner:24.11.0
+      - image: drevops/ci-runner:25.1.0
         environment:
           BUILDX_VERSION: v0.19.1
 

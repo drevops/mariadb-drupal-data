@@ -53,8 +53,7 @@ ls /lagoon/entrypoints | wc -l:
 package:
   mariadb:
     installed: true
-    versions:
-      - 10.11.6-r0
+
 user:
   mysql:
     exists: true

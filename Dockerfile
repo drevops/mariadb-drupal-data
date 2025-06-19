@@ -7,7 +7,7 @@
 # support setting data directory as an environment variable) to support new
 # location and overriding default CMD to include our custom data directory.
 #
-FROM uselagoon/mariadb-10.11-drupal:25.5.0
+FROM uselagoon/mariadb-10.11-drupal:25.6.0
 
 # Set the data directory to a different location that a mounted volume.
 ENV MARIADB_DATA_DIR=/home/db-data

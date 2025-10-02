@@ -24,6 +24,10 @@ jobs:
       - setup_remote_docker
 
       - run:
+          name: Install goss
+          command: curl -fsSL https://goss.rocks/install | sh && goss --version
+
+      - run:
           name: Create Docker builder and install emulators
           command: |
             docker buildx create --name multiarch --driver docker-container --use
@@ -32,6 +36,8 @@ jobs:
       - run:
           name: Run Goss tests
           command: |
+            export GOSS_FILES_STRATEGY=cp
+            export GOSS_PATH=/usr/local/bin/goss
             docker build -t gosstestorg/gosstestimage:goss-test-tag .
             GOSS_FILES_PATH=tests/dgoss dgoss run -i gosstestorg/gosstestimage:goss-test-tag
 

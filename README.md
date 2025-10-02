@@ -9,7 +9,7 @@
 
 [![GitHub Issues](https://img.shields.io/github/issues/drevops/mariadb-drupal-data.svg)](https://github.com/drevops/mariadb-drupal-data/issues)
 [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/drevops/mariadb-drupal-data.svg)](https://github.com/drevops/mariadb-drupal-data/pulls)
-[![CircleCI](https://circleci.com/gh/drevops/mariadb-drupal-data.svg?style=shield)](https://circleci.com/gh/drevops/mariadb-drupal-data)
+[![Test and Build](https://github.com/drevops/mariadb-drupal-data/actions/workflows/test.yml/badge.svg)](https://github.com/drevops/mariadb-drupal-data/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/drevops/mariadb-drupal-data/graph/badge.svg?token=JYSIXUF6QX)](https://codecov.io/gh/drevops/mariadb-drupal-data)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/drevops/mariadb-drupal-data)
 ![LICENSE](https://img.shields.io/github/license/drevops/mariadb-drupal-data)
@@ -75,21 +75,43 @@ BASE_IMAGE=drevops/mariadb-drupal-data:canary ./seed.sh path/to/db.sql myorg/myi
 
 Note that you should already be logged in to the registry as `seed.sh` will be pushing an image as a part of `docker buildx` process.
 
-## Maintenance
+## Maintenance and releasing
 
 ### Running tests
 
-    tests/bats/node_modules/.bin/bats tests/bats/image.bats --tap
-    tests/bats/node_modules/.bin/bats tests/bats/seed.bats --tap
+```shell
+npm --prefix tests/bats install
+tests/bats/node_modules/.bin/bats tests/bats/image.bats --tap
+tests/bats/node_modules/.bin/bats tests/bats/seed.bats --tap
+```
 
-### Publishing
+### Versioning
 
-This image is built and pushed automatically to DockerHub:
-1. For all commits to `main` branch as `canary` tag.
-2. For releases as `:<version>` and `latest` tag.
-3. For `feature/my-branch` branches as `feature-my-branch` tag.
+This project uses _Year-Month-Patch_ versioning:
+
+- `YY`: Last two digits of the year, e.g., `23` for 2023.
+- `m`: Numeric month, e.g., April is `4`.
+- `patch`: Patch number for the month, starting at `0`.
+
+Example: `23.4.2` indicates the third patch in April 2023.
 
 Versions are following versions of the [upstream image](https://hub.docker.com/r/uselagoon/mariadb-drupal/tags) to ease maintenance.
+
+### Releasing
+
+Releases are scheduled to occur at a minimum of once per month.
+
+This image is built by DockerHub via an automated build and tagged as follows:
+
+- `YY.m.patch` tag - when release tag is published on GitHub.
+- `latest` - when release tag is published on GitHub.
+- `canary` - on every push to `main` branch
+
+### Dependencies update
+
+Renovate bot is used to update dependencies. It creates a PR with the changes
+and automatically merges it if CI passes. These changes are then released as
+a `canary` version.
 
 ---
 _This repository was created using the [Scaffold](https://getscaffold.dev/) project template_

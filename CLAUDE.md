@@ -109,8 +109,9 @@ BUILDX_PLATFORMS=linux/arm64 DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node
 - Pushes `canary` tag to DockerHub on main branch
 
 **release.yml** - Runs on Git tags:
-- Drafts release notes using release-drafter
+- Drafts release notes using release-drafter with CalVer version
 - Builds and pushes versioned + `latest` tags to DockerHub
+- Uploads `seed.sh` as a release asset
 
 ### Configuration
 

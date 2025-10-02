@@ -101,11 +101,13 @@ Versions are following versions of the [upstream image](https://hub.docker.com/r
 
 Releases are scheduled to occur at a minimum of once per month.
 
-This image is built by DockerHub via an automated build and tagged as follows:
+This image is built by GitHub Actions and tagged as follows:
 
 - `YY.m.patch` tag - when release tag is published on GitHub.
 - `latest` - when release tag is published on GitHub.
 - `canary` - on every push to `main` branch
+
+The `seed.sh` script is automatically uploaded as a release asset and can be downloaded from the latest release.
 
 ### Dependencies update
 

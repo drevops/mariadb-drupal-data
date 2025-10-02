@@ -98,13 +98,25 @@ BUILDX_PLATFORMS=linux/arm64 DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node
 
 ## CI/CD
 
-- Uses CircleCI with `drevops/ci-runner:25.9.0` image
-- Publishes to DockerHub:
-  - `main` branch → `canary` tag
-  - Git tags → versioned tag + `latest`
-  - Feature branches → `feature-branch-name` tag (but renovate branches are skipped)
+### Workflows
+
+**test.yml** - Runs on PRs and pushes to main:
+- Uses `drevops/ci-runner:25.9.0` container image
+- Lints shell scripts with `shfmt` and `shellcheck`
+- Runs Goss structural tests
+- Runs BATS tests with code coverage (kcov)
+- Uploads coverage to Codecov
+- Pushes `canary` tag to DockerHub on main branch
+
+**release.yml** - Runs on Git tags:
+- Drafts release notes using release-drafter
+- Builds and pushes versioned + `latest` tags to DockerHub
+
+### Configuration
+
 - Multi-platform builds: `linux/amd64,linux/arm64`
-- Code coverage uploaded to Codecov via kcov
+- Required secrets: `DOCKER_USER`, `DOCKER_PASS`, `CODECOV_TOKEN`
+- Optional vars: `CI_LINT_IGNORE_FAILURE`, `CI_TEST_IGNORE_FAILURE` (set to '1' to ignore failures)
 
 ## Important Notes
 

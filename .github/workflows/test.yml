@@ -1,0 +1,113 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - main
+      - 'feature/**'
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    container:
+      # https://hub.docker.com/r/drevops/ci-runner
+      image: drevops/ci-runner:25.9.0@sha256:94e278c994808d966dd28143fe990b19351697a5915a0ab346f39434aec28b27
+
+    steps:
+      - name: Configure Git safe directory
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
+      - name: Check out the repo
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: Lint shell scripts
+        run: |
+          shfmt -i 2 -ci -s -d seed.sh tests/bats/*.bash tests/bats/*.bats
+          shellcheck seed.sh tests/bats/*.bash tests/bats/*.bats
+        continue-on-error: ${{ vars.CI_LINT_IGNORE_FAILURE == '1' }}
+
+      - name: Install goss
+        run: curl -fsSL https://goss.rocks/install | sh && goss --version
+
+      - name: Build Docker image
+        run: docker build -t gosstestorg/gosstestimage:goss-test-tag .
+
+      - name: Run Goss tests
+        run: |
+          export GOSS_FILES_STRATEGY=cp
+          export GOSS_PATH=/usr/local/bin/goss
+          GOSS_FILES_PATH=tests/dgoss dgoss run -i gosstestorg/gosstestimage:goss-test-tag
+        continue-on-error: ${{ vars.CI_TEST_IGNORE_FAILURE == '1' }}
+
+      - name: Install BATS dependencies
+        run: npm --prefix tests/bats ci
+
+      - name: Run BATS tests with code coverage
+        run: |
+          echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin
+          kcov --include-pattern=.sh,.bash --bash-parse-files-in-dir=. --exclude-pattern=vendor,node_modules,coverage $(pwd)/coverage tests/bats/node_modules/.bin/bats tests/bats
+        shell: bash
+        continue-on-error: ${{ vars.CI_TEST_IGNORE_FAILURE == '1' }}
+        env:
+          DOCKER_USER: ${{ secrets.DOCKER_USER }}
+          DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
+
+      - name: Upload coverage report as an artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{github.job}}-code-coverage-report
+          include-hidden-files: true
+          path: coverage
+          if-no-files-found: error
+
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        with:
+          directory: coverage
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  push-canary-to-registry:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    needs:
+      - test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5
+        with:
+          images: drevops/mariadb-drupal-data
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6
+        with:
+          context: .
+          push: true
+          tags: drevops/mariadb-drupal-data:canary
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64

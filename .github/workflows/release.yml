@@ -71,7 +71,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
       - name: Upload seed.sh to release
-        uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe # v2
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
         with:
           files: seed.sh
           overwrite: true

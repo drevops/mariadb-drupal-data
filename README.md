@@ -19,6 +19,7 @@
 ![amd64](https://img.shields.io/badge/arch-linux%2Famd64-brightgreen)
 ![arm64](https://img.shields.io/badge/arch-linux%2Farm64-brightgreen)
 
+[![Vortex Ecosystem](https://img.shields.io/badge/%F0%9F%8C%80-Vortex%20Ecosystem-2C5A68?style=for-the-badge&labelColor=65ACBC)](https://github.com/drevops/vortex)
 </div>
 
 ## How it works

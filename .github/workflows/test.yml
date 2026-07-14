@@ -31,7 +31,12 @@ jobs:
         continue-on-error: ${{ vars.CI_LINT_IGNORE_FAILURE == '1' }}
 
       - name: Install goss
-        run: curl -fsSL https://goss.rocks/install | sh && goss --version
+        run: |
+          GOSS_VERSION=v0.4.9
+          sudo curl -fsSL "https://github.com/goss-org/goss/releases/download/${GOSS_VERSION}/goss-linux-amd64" -o /usr/local/bin/goss
+          sudo curl -fsSL "https://github.com/goss-org/goss/releases/download/${GOSS_VERSION}/dgoss" -o /usr/local/bin/dgoss
+          sudo chmod +rx /usr/local/bin/goss /usr/local/bin/dgoss
+          goss --version
 
       - name: Build Docker image
         run: docker build -t gosstestorg/gosstestimage:goss-test-tag .

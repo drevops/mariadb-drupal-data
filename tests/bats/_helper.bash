@@ -99,12 +99,17 @@ debug() {
 
 random_string_lower() {
   local len="${1:-8}"
-  local ret
-  # Read a bounded amount of random bytes so that the pipeline terminates on
+  local ret=""
+
+  # Read bounded chunks of random bytes so that the pipeline terminates on
   # EOF: an unbounded stream relies on SIGPIPE to stop, which hangs forever
-  # in environments where SIGPIPE is ignored.
-  ret=$(head -c 1024 /dev/urandom | env LC_CTYPE=C tr -dc 'a-z0-9' | head -c "${len}")
-  echo "${ret}"
+  # in environments where SIGPIPE is ignored. Chunks are accumulated until
+  # the requested length is reached.
+  while [ "${#ret}" -lt "${len}" ]; do
+    ret="${ret}$(head -c 1024 /dev/urandom | env LC_CTYPE=C tr -dc 'a-z0-9')"
+  done
+
+  echo "${ret:0:len}"
 }
 
 wait_mysql() {

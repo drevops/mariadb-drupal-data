@@ -11,6 +11,8 @@
 # Usage:
 # ./seed.sh path/to/db.sql myorg/myimage:latest
 #
+# DESTINATION_PLATFORMS=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
+#
 # DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
 #
 # shellcheck disable=SC2002,SC2015
@@ -35,7 +37,7 @@ BASE_IMAGE="${BASE_IMAGE:-drevops/mariadb-drupal-data:latest}"
 DOCKER_DEFAULT_PLATFORM="${DOCKER_DEFAULT_PLATFORM:-}"
 
 # Destination platforms to build for.
-DESTINATION_PLATFORMS="${DESTINATION_PLATFORMS:-linux/amd64}"
+DESTINATION_PLATFORMS="${DESTINATION_PLATFORMS:-linux/amd64,linux/arm64}"
 
 # Log directory on host to store container logs.
 LOG_DIR="${LOG_DIR:-.logs}"
@@ -183,10 +185,6 @@ mkdir -p "${LOG_DIR}" >/dev/null
 rm -Rf "${TMP_STRUCTURE_DIR}" >/dev/null
 mkdir -p "${TMP_STRUCTURE_DIR}" >/dev/null
 
-if [ "$(uname -m)" = "arm64" ]; then
-  export DOCKER_DEFAULT_PLATFORM=linux/amd64
-fi
-
 if [ -n "${DOCKER_DEFAULT_PLATFORM}" ]; then
   task "Source platform architecture: ${DOCKER_DEFAULT_PLATFORM}"
 fi
@@ -254,10 +252,31 @@ pass "Built image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s) from ${B
 
 info "Stage 3: Test image"
 
-start_container "${DST_IMAGE}" 1000
-cid="$(get_started_container_id "${DST_IMAGE}")"
-assert_db_was_imported "${cid}" 1000
-stop_container "${cid}"
+# The test stage runs a container from the destination image. A foreign
+# architecture image would run under emulation, where MariaDB does not start
+# reliably, so testing is limited to images built for the host platform.
+host_arch="$(uname -m)"
+case "${host_arch}" in
+  x86_64) host_platform="linux/amd64" ;;
+  arm64 | aarch64) host_platform="linux/arm64" ;;
+  *) host_platform="linux/${host_arch}" ;;
+esac
+
+host_platform_is_built=0
+case ",${DESTINATION_PLATFORMS}," in
+  *,"${host_platform}",*) host_platform_is_built=1 ;;
+esac
+
+if [ "${host_platform_is_built}" = "1" ]; then
+  start_container "${DST_IMAGE}" 1000
+  cid="$(get_started_container_id "${DST_IMAGE}")"
+  assert_db_was_imported "${cid}" 1000
+  stop_container "${cid}"
+else
+  note "Skipping test stage: host platform ${host_platform} is not among the destination platform(s) ${DESTINATION_PLATFORMS}."
+  note "A foreign-architecture image cannot be tested locally under emulation."
+  pass "Skipped test stage."
+fi
 
 if [ -f ".dockerignore.bak" ]; then
   note "Restoring .dockerignore from .dockerignore.bak"

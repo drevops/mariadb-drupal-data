@@ -26,8 +26,8 @@ This project provides a MariaDB Docker image for Drupal that captures database d
 3. **seed.sh** - Three-phase database seeding script:
    - **Phase 1**: Import SQL dump into temporary container and extract database files
    - **Phase 2**: Build new image with extracted database files using `docker buildx`
-   - **Phase 3**: Verify database exists in the new image
-   - Supports multi-platform builds (linux/amd64, linux/arm64)
+   - **Phase 3**: Verify database exists in the new image (skipped when the host platform is not among the destination platforms)
+   - Builds multi-platform images (linux/amd64, linux/arm64) by default
    - Uses `docker buildx` to push directly to registry during build
 
 ### Important Patterns
@@ -74,14 +74,14 @@ Build image locally:
 docker build -t drevops/mariadb-drupal-data:local .
 ```
 
-Seed image with database (single platform):
+Seed image with database (multi-platform by default):
 ```bash
 ./seed.sh path/to/db.sql myorg/myimage:latest
 ```
 
-Seed image with database (multi-platform):
+Seed image with database (single platform):
 ```bash
-DESTINATION_PLATFORMS=linux/amd64,linux/arm64 ./seed.sh path/to/db.sql myorg/myimage:latest
+DESTINATION_PLATFORMS=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
 ```
 
 Use custom base image:
@@ -104,6 +104,7 @@ BUILDX_PLATFORMS=linux/arm64 DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node
 - Uses `drevops/ci-runner:25.9.0` container image
 - Lints shell scripts with `shfmt` and `shellcheck`
 - Runs Goss structural tests
+- Sets up QEMU for emulating foreign architectures in BATS tests
 - Runs BATS tests with code coverage (kcov)
 - Uploads coverage to Codecov
 - Pushes `canary` tag to DockerHub on main branch

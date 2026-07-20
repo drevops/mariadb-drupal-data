@@ -74,6 +74,88 @@ load _helper
   assert_output_contains "users"
 }
 
+@test "Seeding of the data works for multiple platforms" {
+  tag="${TEST_DOCKER_TAG_PREFIX}$(random_string_lower)"
+  export BASE_IMAGE="drevops/mariadb-drupal-data-test:${tag}-base"
+  dst_image="drevops/mariadb-drupal-data-test:${tag}-dst"
+
+  prepare_multiarch_builder
+
+  # Run all containers on the host platform to imitate a user running the
+  # script without any platform overrides.
+  DOCKER_DEFAULT_PLATFORM="$(host_platform)"
+  export DOCKER_DEFAULT_PLATFORM
+
+  step "Prepare base image."
+
+  substep "Copying fixture DB dump."
+  file="${BUILD_DIR}/db.sql"
+  cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${file}"
+
+  substep "Build and push a fresh multi-platform base image tagged with ${BASE_IMAGE}."
+  docker buildx build --platform linux/amd64,linux/arm64 --push --no-cache -t "${BASE_IMAGE}" .
+
+  step "Assert seeding for multiple platforms works."
+
+  export DESTINATION_PLATFORMS="linux/amd64,linux/arm64"
+  substep "Run DB seeding script for ${dst_image} from the base image ${BASE_IMAGE} for destination platform(s) ${DESTINATION_PLATFORMS}."
+  run ./seed.sh "${file}" "${dst_image}"
+  assert_success
+  assert_output_not_contains "Skipping test stage"
+
+  substep "Assert that the pushed image contains all destination platforms."
+  run docker buildx imagetools inspect "${dst_image}"
+  assert_success
+  assert_output_contains "linux/amd64"
+  assert_output_contains "linux/arm64"
+
+  substep "Start container from the seeded image ${dst_image}."
+  # Start container with a non-root user to imitate limited host permissions.
+  cid=$(docker run --user 1000 -d "${dst_image}" 2>&3)
+
+  wait_mysql "${cid}"
+
+  substep "Assert that data was captured into the new image."
+  run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "use drupal;show tables;" drupal
+  assert_output_contains "users"
+}
+
+@test "Seeding of the data skips the test stage for a foreign platform" {
+  tag="${TEST_DOCKER_TAG_PREFIX}$(random_string_lower)"
+  export BASE_IMAGE="drevops/mariadb-drupal-data-test:${tag}-base"
+  dst_image="drevops/mariadb-drupal-data-test:${tag}-dst"
+
+  prepare_multiarch_builder
+
+  # Run all containers on the host platform to imitate a user running the
+  # script without any platform overrides.
+  DOCKER_DEFAULT_PLATFORM="$(host_platform)"
+  export DOCKER_DEFAULT_PLATFORM
+
+  step "Prepare base image."
+
+  substep "Copying fixture DB dump."
+  file="${BUILD_DIR}/db.sql"
+  cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${file}"
+
+  substep "Build and push a fresh multi-platform base image tagged with ${BASE_IMAGE}."
+  docker buildx build --platform linux/amd64,linux/arm64 --push --no-cache -t "${BASE_IMAGE}" .
+
+  step "Assert seeding for a foreign platform skips the test stage."
+
+  DESTINATION_PLATFORMS="$(foreign_platform)"
+  export DESTINATION_PLATFORMS
+  substep "Run DB seeding script for ${dst_image} from the base image ${BASE_IMAGE} for destination platform(s) ${DESTINATION_PLATFORMS}."
+  run ./seed.sh "${file}" "${dst_image}"
+  assert_success
+  assert_output_contains "Skipping test stage"
+
+  substep "Assert that the pushed image contains the foreign platform."
+  run docker buildx imagetools inspect "${dst_image}"
+  assert_success
+  assert_output_contains "$(foreign_platform)"
+}
+
 @test "Seeding of the data works with .dockerignore" {
   tag="${TEST_DOCKER_TAG_PREFIX}$(random_string_lower)"
   export BASE_IMAGE="drevops/mariadb-drupal-data-test:${tag}-base"

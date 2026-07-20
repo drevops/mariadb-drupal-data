@@ -64,15 +64,17 @@ chmod +x seed.sh
 ```shell
 ./seed.sh path/to/db.sql myorg/myimage:latest
 
-# with forced platform
-DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
+# for a single-platform image
+DESTINATION_PLATFORMS=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
 
-# for multi-platform image
-DESTINATION_PLATFORMS=linux/amd64,linux/arm64 ./seed.sh path/to/db.sql myorg/myimage:latest
+# with forced source platform
+DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
 
 # with a custom base image (e.g., canary)
 BASE_IMAGE=drevops/mariadb-drupal-data:canary ./seed.sh path/to/db.sql myorg/myimage:latest
 ```
+
+By default, the script builds a multi-platform image for `linux/amd64` and `linux/arm64`, seeding the database natively on both Intel and ARM hosts. Multi-platform builds require a Docker buildx builder that supports them (Docker Desktop with the containerd image store, or a `docker-container` builder). The final test stage runs the image variant matching the host platform and is skipped with a note when the host platform is not among `DESTINATION_PLATFORMS`.
 
 Note that you should already be logged in to the registry as `seed.sh` will be pushing an image as a part of `docker buildx` process.
 

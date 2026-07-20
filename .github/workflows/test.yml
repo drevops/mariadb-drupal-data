@@ -48,6 +48,9 @@ jobs:
           GOSS_FILES_PATH=tests/dgoss dgoss run -i gosstestorg/gosstestimage:goss-test-tag
         continue-on-error: ${{ vars.CI_TEST_IGNORE_FAILURE == '1' }}
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4
+
       - name: Install BATS dependencies
         run: npm --prefix tests/bats ci
 

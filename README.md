@@ -74,7 +74,7 @@ DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:lates
 BASE_IMAGE=drevops/mariadb-drupal-data:canary ./seed.sh path/to/db.sql myorg/myimage:latest
 ```
 
-By default, the script builds a multi-platform image for `linux/amd64` and `linux/arm64`, seeding the database natively on both Intel and ARM hosts. Multi-platform builds require a Docker buildx builder that supports them (Docker Desktop with the containerd image store, or a `docker-container` builder). The final test stage runs the image variant matching the host platform and is skipped with a note when the host platform is not among `DESTINATION_PLATFORMS`.
+By default, the script builds a multi-platform image for `linux/amd64` and `linux/arm64`, producing an image that runs natively on both Intel and ARM hosts. Multi-platform builds require a Docker buildx builder that supports them (Docker Desktop with the containerd image store, or a `docker-container` builder). The final test stage runs the image variant matching the host platform and is skipped with a note when the host platform is not among `DESTINATION_PLATFORMS`.
 
 Note that you should already be logged in to the registry as `seed.sh` will be pushing an image as a part of `docker buildx` process.
 

@@ -101,11 +101,11 @@ BUILDX_PLATFORMS=linux/arm64 DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node
 ### Workflows
 
 **test.yml** - Runs on PRs and pushes to main:
-- Uses `drevops/ci-runner:25.9.0` container image
-- Lints shell scripts with `shfmt` and `shellcheck`
+- Runs the test job on a matrix of amd64 (`ubuntu-latest`, inside the `drevops/ci-runner` container) and arm64 (`ubuntu-24.04-arm`, directly on the runner) runners
+- Lints shell scripts with `shfmt` and `shellcheck` (amd64 job only)
 - Runs Goss structural tests
 - Sets up QEMU for emulating foreign architectures in BATS tests
-- Runs BATS tests with code coverage (kcov)
+- Runs BATS tests with code coverage (kcov; coverage collected on the amd64 job only)
 - Uploads coverage to Codecov
 - Pushes `canary` tag to DockerHub on main branch
 
@@ -126,4 +126,4 @@ BUILDX_PLATFORMS=linux/arm64 DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node
 - The entrypoint script should remain minimally modified for easy upstream syncing
 - When updating base image version, follow upstream versioning
 - seed.sh requires being logged into Docker registry (it pushes during buildx)
-- Tests always run for linux/amd64 unless explicitly configured otherwise
+- Tests run for the host platform unless explicitly configured otherwise

@@ -4,8 +4,8 @@
 #
 # tests/bats/node_modules/.bin/bats --tap tests/bats/image.bats
 #
-# Note that these tests will always run only for the linux/amd64 platform by
-# default. To run the tests for other platforms, set the BUILDX_PLATFORMS and
+# Note that these tests run for the host platform by default. To run the
+# tests for other platforms, set the BUILDX_PLATFORMS and
 # DOCKER_DEFAULT_PLATFORM environment variables to the desired platform(s). But
 # make sure that the platform is supported by the Docker buildx driver.
 #

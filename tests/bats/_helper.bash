@@ -50,7 +50,8 @@ setup() {
   fi
   # LCOV_EXCL_END
 
-  export DOCKER_DEFAULT_PLATFORM="${DOCKER_DEFAULT_PLATFORM:-linux/amd64}"
+  DOCKER_DEFAULT_PLATFORM="${DOCKER_DEFAULT_PLATFORM:-$(host_platform)}"
+  export DOCKER_DEFAULT_PLATFORM
   step "Using ${DOCKER_DEFAULT_PLATFORM} platform architecture."
 
   # Due to a limitation in buildx driver to build multi-platform images in some

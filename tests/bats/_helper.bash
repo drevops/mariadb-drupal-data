@@ -100,8 +100,10 @@ debug() {
 random_string_lower() {
   local len="${1:-8}"
   local ret
-  # shellcheck disable=SC2002
-  ret=$(cat /dev/urandom | env LC_CTYPE=C tr -dc 'a-z0-9' | fold -w "${len}" | head -n 1)
+  # Read a bounded amount of random bytes so that the pipeline terminates on
+  # EOF: an unbounded stream relies on SIGPIPE to stop, which hangs forever
+  # in environments where SIGPIPE is ignored.
+  ret=$(head -c 1024 /dev/urandom | env LC_CTYPE=C tr -dc 'a-z0-9' | head -c "${len}")
   echo "${ret}"
 }
 

@@ -11,7 +11,7 @@
 # Usage:
 # ./seed.sh path/to/db.sql myorg/myimage:latest
 #
-# DESTINATION_PLATFORMS=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
+# DESTINATION_PLATFORMS=linux/amd64,linux/arm64 ./seed.sh path/to/db.sql myorg/myimage:latest
 #
 # DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
 #
@@ -37,7 +37,7 @@ BASE_IMAGE="${BASE_IMAGE:-drevops/mariadb-drupal-data:latest}"
 DOCKER_DEFAULT_PLATFORM="${DOCKER_DEFAULT_PLATFORM:-}"
 
 # Destination platforms to build for.
-DESTINATION_PLATFORMS="${DESTINATION_PLATFORMS:-linux/amd64,linux/arm64}"
+DESTINATION_PLATFORMS="${DESTINATION_PLATFORMS:-linux/amd64}"
 
 # Log directory on host to store container logs.
 LOG_DIR="${LOG_DIR:-.logs}"

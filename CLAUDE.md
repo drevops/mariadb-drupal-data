@@ -27,7 +27,7 @@ This project provides a MariaDB Docker image for Drupal that captures database d
    - **Phase 1**: Import SQL dump into temporary container and extract database files
    - **Phase 2**: Build new image with extracted database files using `docker buildx`
    - **Phase 3**: Verify database exists in the new image (skipped when the host platform is not among the destination platforms)
-   - Builds multi-platform images (linux/amd64, linux/arm64) by default
+   - Builds `linux/amd64` images by default; multi-platform builds (linux/amd64, linux/arm64) are opt-in via `DESTINATION_PLATFORMS`
    - Uses `docker buildx` to push directly to registry during build
 
 ### Important Patterns
@@ -79,16 +79,16 @@ Build image locally:
 docker build -t drevops/mariadb-drupal-data:local .
 ```
 
-Seed image with database (multi-platform by default):
+Seed image with database (single platform by default):
 
 ```bash
 ./seed.sh path/to/db.sql myorg/myimage:latest
 ```
 
-Seed image with database (single platform):
+Seed image with database (multi-platform):
 
 ```bash
-DESTINATION_PLATFORMS=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
+DESTINATION_PLATFORMS=linux/amd64,linux/arm64 ./seed.sh path/to/db.sql myorg/myimage:latest
 ```
 
 Use custom base image:

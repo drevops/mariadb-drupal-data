@@ -154,7 +154,10 @@ start_container() {
   user=()
   [ -n "${2-}" ] && user=("--user=${2}")
 
-  cid=$(docker run "${user[@]}" -d "${1}" 2>"$LOG_DIR"/container-start.log)
+  platform=()
+  [ -n "${3-}" ] && platform=("--platform=${3}")
+
+  cid=$(docker run "${user[@]}" "${platform[@]}" -d "${1}" 2>"$LOG_DIR"/container-start.log)
   cat "${LOG_DIR}"/container-start.log >>"$LOG_DIR/${cid}.log" && rm "${LOG_DIR}"/container-start.log || true
 
   wait_for_db_service "${cid}" "${2-}"
@@ -268,7 +271,10 @@ case ",${DESTINATION_PLATFORMS}," in
 esac
 
 if [ "${host_platform_is_built}" = "1" ]; then
-  start_container "${DST_IMAGE}" 1000
+  # Pin the container to the host platform variant so that a
+  # DOCKER_DEFAULT_PLATFORM override cannot select a foreign variant that
+  # would run under emulation.
+  start_container "${DST_IMAGE}" 1000 "${host_platform}"
   cid="$(get_started_container_id "${DST_IMAGE}")"
   assert_db_was_imported "${cid}" 1000
   stop_container "${cid}"

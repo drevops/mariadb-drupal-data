@@ -118,6 +118,16 @@ load _helper
   substep "Assert that data was captured into the new image."
   run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "use drupal;show tables;" drupal
   assert_output_contains "users"
+
+  substep "Assert that the container runs the host platform variant."
+  expected_arch="x86_64"
+
+  if [ "$(host_platform)" = "linux/arm64" ]; then
+    expected_arch="aarch64"
+  fi
+
+  run docker exec --user 1000 "${cid}" uname -m
+  assert_output_contains "${expected_arch}"
 }
 
 @test "Seeding of the data skips the test stage for a foreign platform" {

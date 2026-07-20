@@ -42,18 +42,21 @@ This project provides a MariaDB Docker image for Drupal that captures database d
 ### Testing
 
 Run all BATS tests:
+
 ```bash
 npm --prefix tests/bats ci
 tests/bats/node_modules/.bin/bats tests/bats
 ```
 
 Run specific BATS test file:
+
 ```bash
 tests/bats/node_modules/.bin/bats tests/bats/image.bats --tap
 tests/bats/node_modules/.bin/bats tests/bats/seed.bats --tap
 ```
 
 Run Goss tests (structural tests):
+
 ```bash
 docker build -t testorg/testimage:test-tag .
 GOSS_FILES_PATH=tests/dgoss dgoss run -i testorg/testimage:test-tag
@@ -62,6 +65,7 @@ GOSS_FILES_PATH=tests/dgoss dgoss run -i testorg/testimage:test-tag
 ### Linting
 
 Lint shell scripts:
+
 ```bash
 shfmt -i 2 -ci -s -d seed.sh tests/bats/*.bash tests/bats/*.bats
 shellcheck seed.sh tests/bats/*.bash tests/bats/*.bats
@@ -70,21 +74,25 @@ shellcheck seed.sh tests/bats/*.bash tests/bats/*.bats
 ### Building and Seeding
 
 Build image locally:
+
 ```bash
 docker build -t drevops/mariadb-drupal-data:local .
 ```
 
 Seed image with database (multi-platform by default):
+
 ```bash
 ./seed.sh path/to/db.sql myorg/myimage:latest
 ```
 
 Seed image with database (single platform):
+
 ```bash
 DESTINATION_PLATFORMS=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
 ```
 
 Use custom base image:
+
 ```bash
 BASE_IMAGE=drevops/mariadb-drupal-data:canary ./seed.sh path/to/db.sql myorg/myimage:latest
 ```
@@ -92,6 +100,7 @@ BASE_IMAGE=drevops/mariadb-drupal-data:canary ./seed.sh path/to/db.sql myorg/myi
 ### Platform-specific Testing
 
 Test for ARM64:
+
 ```bash
 BUILDX_PLATFORMS=linux/arm64 DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node_modules/.bin/bats tests/bats/image.bats
 ```

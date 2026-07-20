@@ -81,6 +81,10 @@ load _helper
 
   prepare_multiarch_builder
 
+  if ! builder_supports_platform "$(foreign_platform)"; then
+    skip "Builder cannot build for the $(foreign_platform) platform on this host."
+  fi
+
   # Run all containers on the host platform to imitate a user running the
   # script without any platform overrides.
   DOCKER_DEFAULT_PLATFORM="$(host_platform)"
@@ -136,6 +140,10 @@ load _helper
   dst_image="drevops/mariadb-drupal-data-test:${tag}-dst"
 
   prepare_multiarch_builder
+
+  if ! builder_supports_platform "$(foreign_platform)"; then
+    skip "Builder cannot build for the $(foreign_platform) platform on this host."
+  fi
 
   # Run all containers on the host platform to imitate a user running the
   # script without any platform overrides.

@@ -141,3 +141,8 @@ prepare_multiarch_builder() {
 
   export BUILDX_BUILDER=bats-multiarch
 }
+
+# Check that the current buildx builder can build for the given platform.
+builder_supports_platform() {
+  docker buildx inspect --bootstrap | grep -q "${1}"
+}

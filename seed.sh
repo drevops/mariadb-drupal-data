@@ -36,8 +36,17 @@ BASE_IMAGE="${BASE_IMAGE:-drevops/mariadb-drupal-data:latest}"
 # as `DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest`
 DOCKER_DEFAULT_PLATFORM="${DOCKER_DEFAULT_PLATFORM:-}"
 
-# Destination platforms to build for.
-DESTINATION_PLATFORMS="${DESTINATION_PLATFORMS:-linux/amd64}"
+# Host platform in Docker notation, detected from the host architecture.
+case "$(uname -m)" in
+  x86_64) HOST_PLATFORM="linux/amd64" ;;
+  arm64 | aarch64) HOST_PLATFORM="linux/arm64" ;;
+  *) HOST_PLATFORM="linux/$(uname -m)" ;;
+esac
+
+# Destination platforms to build for. Defaults to the host platform so that
+# the image built in Stage 2 is the same image started and tested in Stage 3,
+# natively, on the machine that runs the seeding.
+DESTINATION_PLATFORMS="${DESTINATION_PLATFORMS:-${HOST_PLATFORM}}"
 
 # Log directory on host to store container logs.
 LOG_DIR="${LOG_DIR:-.logs}"
@@ -154,10 +163,7 @@ start_container() {
   user=()
   [ -n "${2-}" ] && user=("--user=${2}")
 
-  platform=()
-  [ -n "${3-}" ] && platform=("--platform=${3}")
-
-  cid=$(docker run "${user[@]}" "${platform[@]}" -d "${1}" 2>"$LOG_DIR"/container-start.log)
+  cid=$(docker run "${user[@]}" -d "${1}" 2>"$LOG_DIR"/container-start.log)
   cat "${LOG_DIR}"/container-start.log >>"$LOG_DIR/${cid}.log" && rm "${LOG_DIR}"/container-start.log || true
 
   wait_for_db_service "${cid}" "${2-}"
@@ -194,6 +200,7 @@ fi
 
 # Normalize image - add ":latest" if tag was not provided.
 [ -n "${DST_IMAGE##*:*}" ] && DST_IMAGE="${DST_IMAGE}:latest"
+note "Host platform: ${HOST_PLATFORM}"
 note "Destination image: ${DST_IMAGE}"
 note "Destination platform(s): ${DESTINATION_PLATFORMS}"
 
@@ -255,34 +262,10 @@ pass "Built image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s) from ${B
 
 info "Stage 3: Test image"
 
-# The test stage runs a container from the destination image. A foreign
-# architecture image would run under emulation, where MariaDB does not start
-# reliably, so testing is limited to images built for the host platform.
-host_arch="$(uname -m)"
-case "${host_arch}" in
-  x86_64) host_platform="linux/amd64" ;;
-  arm64 | aarch64) host_platform="linux/arm64" ;;
-  *) host_platform="linux/${host_arch}" ;;
-esac
-
-host_platform_is_built=0
-case ",${DESTINATION_PLATFORMS}," in
-  *,"${host_platform}",*) host_platform_is_built=1 ;;
-esac
-
-if [ "${host_platform_is_built}" = "1" ]; then
-  # Pin the container to the host platform variant so that a
-  # DOCKER_DEFAULT_PLATFORM override cannot select a foreign variant that
-  # would run under emulation.
-  start_container "${DST_IMAGE}" 1000 "${host_platform}"
-  cid="$(get_started_container_id "${DST_IMAGE}")"
-  assert_db_was_imported "${cid}" 1000
-  stop_container "${cid}"
-else
-  note "Skipping test stage: host platform ${host_platform} is not among the destination platform(s) ${DESTINATION_PLATFORMS}."
-  note "A foreign-architecture image cannot be tested locally under emulation."
-  pass "Skipped test stage."
-fi
+start_container "${DST_IMAGE}" 1000
+cid="$(get_started_container_id "${DST_IMAGE}")"
+assert_db_was_imported "${cid}" 1000
+stop_container "${cid}"
 
 if [ -f ".dockerignore.bak" ]; then
   note "Restoring .dockerignore from .dockerignore.bak"

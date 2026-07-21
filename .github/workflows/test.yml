@@ -11,11 +11,26 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: Test, Arch ${{ matrix.arch }}
 
-    container:
-      # https://hub.docker.com/r/drevops/ci-runner
-      image: drevops/ci-runner:26.6.0@sha256:190027056cac7b7ce28c29a1e5494779ebadc4ee8e95d468b75bc56e7be5aabd
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            os: ubuntu-latest
+            # https://hub.docker.com/r/drevops/ci-runner
+            container: drevops/ci-runner:26.6.0@sha256:190027056cac7b7ce28c29a1e5494779ebadc4ee8e95d468b75bc56e7be5aabd
+          # The ci-runner image is amd64-only, so the arm64 job runs directly
+          # on the runner: linting and coverage are amd64-only for the same
+          # reason (shfmt and kcov are provided by the ci-runner image).
+          - arch: arm64
+            os: ubuntu-24.04-arm
+            container: ''
+
+    runs-on: ${{ matrix.os }}
+
+    container: ${{ matrix.container }}
 
     steps:
       - name: Configure Git safe directory
@@ -25,6 +40,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Lint shell scripts
+        if: matrix.arch == 'amd64'
         run: |
           shfmt -i 2 -ci -s -d seed.sh tests/bats/*.bash tests/bats/*.bats
           shellcheck seed.sh tests/bats/*.bash tests/bats/*.bats
@@ -33,10 +49,11 @@ jobs:
       - name: Install goss
         run: |
           GOSS_VERSION=v0.4.9
-          curl -fsSL "https://github.com/goss-org/goss/releases/download/${GOSS_VERSION}/goss-linux-amd64" -o /usr/local/bin/goss
-          curl -fsSL "https://github.com/goss-org/goss/releases/download/${GOSS_VERSION}/dgoss" -o /usr/local/bin/dgoss
-          chmod +rx /usr/local/bin/goss /usr/local/bin/dgoss
-          goss --version
+          mkdir -p "${HOME}/bin"
+          curl -fsSL "https://github.com/goss-org/goss/releases/download/${GOSS_VERSION}/goss-linux-${{ matrix.arch }}" -o "${HOME}/bin/goss"
+          curl -fsSL "https://github.com/goss-org/goss/releases/download/${GOSS_VERSION}/dgoss" -o "${HOME}/bin/dgoss"
+          chmod +rx "${HOME}/bin/goss" "${HOME}/bin/dgoss"
+          "${HOME}/bin/goss" --version
 
       - name: Build Docker image
         run: docker build -t gosstestorg/gosstestimage:goss-test-tag .
@@ -44,14 +61,15 @@ jobs:
       - name: Run Goss tests
         run: |
           export GOSS_FILES_STRATEGY=cp
-          export GOSS_PATH=/usr/local/bin/goss
-          GOSS_FILES_PATH=tests/dgoss dgoss run -i gosstestorg/gosstestimage:goss-test-tag
+          export GOSS_PATH="${HOME}/bin/goss"
+          GOSS_FILES_PATH=tests/dgoss "${HOME}/bin/dgoss" run -i gosstestorg/gosstestimage:goss-test-tag
         continue-on-error: ${{ vars.CI_TEST_IGNORE_FAILURE == '1' }}
 
       - name: Install BATS dependencies
         run: npm --prefix tests/bats ci
 
       - name: Run BATS tests with code coverage
+        if: matrix.arch == 'amd64'
         run: |
           echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin
           kcov --include-pattern=.sh,.bash --bash-parse-files-in-dir=. --exclude-pattern=vendor,node_modules,coverage $(pwd)/coverage tests/bats/node_modules/.bin/bats tests/bats
@@ -61,7 +79,19 @@ jobs:
           DOCKER_USER: ${{ secrets.DOCKER_USER }}
           DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
 
+      - name: Run BATS tests
+        if: matrix.arch == 'arm64'
+        run: |
+          echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin
+          tests/bats/node_modules/.bin/bats tests/bats
+        shell: bash
+        continue-on-error: ${{ vars.CI_TEST_IGNORE_FAILURE == '1' }}
+        env:
+          DOCKER_USER: ${{ secrets.DOCKER_USER }}
+          DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
+
       - name: Upload coverage report as an artifact
+        if: matrix.arch == 'amd64'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ${{github.job}}-code-coverage-report
@@ -71,7 +101,7 @@ jobs:
 
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
-        if: ${{ env.CODECOV_TOKEN != '' }}
+        if: ${{ matrix.arch == 'amd64' && env.CODECOV_TOKEN != '' }}
         with:
           directory: coverage
           fail_ci_if_error: true

@@ -11,6 +11,8 @@
 # Usage:
 # ./seed.sh path/to/db.sql myorg/myimage:latest
 #
+# DESTINATION_PLATFORMS=linux/amd64,linux/arm64 ./seed.sh path/to/db.sql myorg/myimage:latest
+#
 # DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
 #
 # shellcheck disable=SC2002,SC2015
@@ -34,8 +36,17 @@ BASE_IMAGE="${BASE_IMAGE:-drevops/mariadb-drupal-data:latest}"
 # as `DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest`
 DOCKER_DEFAULT_PLATFORM="${DOCKER_DEFAULT_PLATFORM:-}"
 
-# Destination platforms to build for.
-DESTINATION_PLATFORMS="${DESTINATION_PLATFORMS:-linux/amd64}"
+# Host platform in Docker notation, detected from the host architecture.
+case "$(uname -m)" in
+  x86_64) HOST_PLATFORM="linux/amd64" ;;
+  arm64 | aarch64) HOST_PLATFORM="linux/arm64" ;;
+  *) HOST_PLATFORM="linux/$(uname -m)" ;;
+esac
+
+# Destination platforms to build for. Defaults to the host platform so that
+# the image built in Stage 2 is the same image started and tested in Stage 3,
+# natively, on the machine that runs the seeding.
+DESTINATION_PLATFORMS="${DESTINATION_PLATFORMS:-${HOST_PLATFORM}}"
 
 # Log directory on host to store container logs.
 LOG_DIR="${LOG_DIR:-.logs}"
@@ -183,16 +194,13 @@ mkdir -p "${LOG_DIR}" >/dev/null
 rm -Rf "${TMP_STRUCTURE_DIR}" >/dev/null
 mkdir -p "${TMP_STRUCTURE_DIR}" >/dev/null
 
-if [ "$(uname -m)" = "arm64" ]; then
-  export DOCKER_DEFAULT_PLATFORM=linux/amd64
-fi
-
 if [ -n "${DOCKER_DEFAULT_PLATFORM}" ]; then
   task "Source platform architecture: ${DOCKER_DEFAULT_PLATFORM}"
 fi
 
 # Normalize image - add ":latest" if tag was not provided.
 [ -n "${DST_IMAGE##*:*}" ] && DST_IMAGE="${DST_IMAGE}:latest"
+note "Host platform: ${HOST_PLATFORM}"
 note "Destination image: ${DST_IMAGE}"
 note "Destination platform(s): ${DESTINATION_PLATFORMS}"
 

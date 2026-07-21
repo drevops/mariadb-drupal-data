@@ -50,7 +50,8 @@ setup() {
   fi
   # LCOV_EXCL_END
 
-  export DOCKER_DEFAULT_PLATFORM="${DOCKER_DEFAULT_PLATFORM:-linux/amd64}"
+  DOCKER_DEFAULT_PLATFORM="${DOCKER_DEFAULT_PLATFORM:-$(host_platform)}"
+  export DOCKER_DEFAULT_PLATFORM
   step "Using ${DOCKER_DEFAULT_PLATFORM} platform architecture."
 
   # Due to a limitation in buildx driver to build multi-platform images in some
@@ -98,10 +99,17 @@ debug() {
 
 random_string_lower() {
   local len="${1:-8}"
-  local ret
-  # shellcheck disable=SC2002
-  ret=$(cat /dev/urandom | env LC_CTYPE=C tr -dc 'a-z0-9' | fold -w "${len}" | head -n 1)
-  echo "${ret}"
+  local ret=""
+
+  # Read bounded chunks of random bytes so that the pipeline terminates on
+  # EOF: an unbounded stream relies on SIGPIPE to stop, which hangs forever
+  # in environments where SIGPIPE is ignored. Chunks are accumulated until
+  # the requested length is reached.
+  while [ "${#ret}" -lt "${len}" ]; do
+    ret="${ret}$(head -c 1024 /dev/urandom | env LC_CTYPE=C tr -dc 'a-z0-9')"
+  done
+
+  echo "${ret:0:len}"
 }
 
 wait_mysql() {
@@ -111,4 +119,13 @@ wait_mysql() {
     docker logs "${cid}"
     exit 1
   fi
+}
+
+# Get the Docker platform matching the host architecture.
+host_platform() {
+  case "$(uname -m)" in
+    x86_64) echo "linux/amd64" ;;
+    arm64 | aarch64) echo "linux/arm64" ;;
+    *) echo "linux/$(uname -m)" ;;
+  esac
 }

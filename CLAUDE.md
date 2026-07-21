@@ -99,7 +99,7 @@ BASE_IMAGE=drevops/mariadb-drupal-data:canary ./seed.sh path/to/db.sql myorg/myi
 
 ### Platform-specific Testing
 
-Test for ARM64:
+Tests run for the host platform by default. To force a specific platform, set the platform variables explicitly; forcing a foreign platform requires emulation, under which MariaDB does not start reliably:
 
 ```bash
 BUILDX_PLATFORMS=linux/arm64 DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node_modules/.bin/bats tests/bats/image.bats

@@ -110,10 +110,10 @@ BUILDX_PLATFORMS=linux/arm64 DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node
 ### Workflows
 
 **test.yml** - Runs on PRs and pushes to main:
-- Runs the test job on a matrix of amd64 (`ubuntu-latest`, inside the `drevops/ci-runner` container) and arm64 (`ubuntu-24.04-arm`, directly on the runner) runners
-- Lints shell scripts with `shfmt` and `shellcheck` (amd64 job only)
+- Runs the test job on a matrix: native amd64 (`ubuntu-latest`), native arm64 (`ubuntu-24.04-arm`), and amd64 inside the `drevops/ci-runner` container (the "custom runner" job)
+- Lints shell scripts with `shfmt` and `shellcheck` (custom runner job only)
 - Runs Goss structural tests
-- Runs BATS tests with code coverage (kcov; coverage collected on the amd64 job only)
+- Runs BATS tests with code coverage (kcov; coverage collected on the custom runner job only)
 - Uploads coverage to Codecov
 - Pushes `canary` tag to DockerHub on main branch
 

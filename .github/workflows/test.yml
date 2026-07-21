@@ -11,22 +11,29 @@ on:
 
 jobs:
   test:
-    name: Test, Arch ${{ matrix.arch }}
+    name: ${{ matrix.name }}
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          - arch: amd64
+          - name: Test, Arch amd64
+            arch: amd64
+            os: ubuntu-latest
+            container: ''
+          - name: Test, Arch arm64
+            arch: arm64
+            os: ubuntu-24.04-arm
+            container: ''
+          # The custom runner job validates the containerised CI environment
+          # that consumer projects run the seeding in. Linting and coverage
+          # run only in this job because the ci-runner image bundles shfmt
+          # and kcov.
+          - name: Test, Arch amd64, custom runner
+            arch: amd64
             os: ubuntu-latest
             # https://hub.docker.com/r/drevops/ci-runner
             container: drevops/ci-runner:26.6.0@sha256:190027056cac7b7ce28c29a1e5494779ebadc4ee8e95d468b75bc56e7be5aabd
-          # The ci-runner image is amd64-only, so the arm64 job runs directly
-          # on the runner: linting and coverage are amd64-only for the same
-          # reason (shfmt and kcov are provided by the ci-runner image).
-          - arch: arm64
-            os: ubuntu-24.04-arm
-            container: ''
 
     runs-on: ${{ matrix.os }}
 
@@ -40,7 +47,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Lint shell scripts
-        if: matrix.arch == 'amd64'
+        if: matrix.container != ''
         run: |
           shfmt -i 2 -ci -s -d seed.sh tests/bats/*.bash tests/bats/*.bats
           shellcheck seed.sh tests/bats/*.bash tests/bats/*.bats
@@ -69,7 +76,7 @@ jobs:
         run: npm --prefix tests/bats ci
 
       - name: Run BATS tests with code coverage
-        if: matrix.arch == 'amd64'
+        if: matrix.container != ''
         run: |
           echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin
           kcov --include-pattern=.sh,.bash --bash-parse-files-in-dir=. --exclude-pattern=vendor,node_modules,coverage $(pwd)/coverage tests/bats/node_modules/.bin/bats tests/bats
@@ -80,7 +87,7 @@ jobs:
           DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
 
       - name: Run BATS tests
-        if: matrix.arch == 'arm64'
+        if: matrix.container == ''
         run: |
           echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin
           tests/bats/node_modules/.bin/bats tests/bats
@@ -91,7 +98,7 @@ jobs:
           DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
 
       - name: Upload coverage report as an artifact
-        if: matrix.arch == 'amd64'
+        if: matrix.container != ''
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ${{github.job}}-code-coverage-report
@@ -101,7 +108,7 @@ jobs:
 
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
-        if: ${{ matrix.arch == 'amd64' && env.CODECOV_TOKEN != '' }}
+        if: ${{ matrix.container != '' && env.CODECOV_TOKEN != '' }}
         with:
           directory: coverage
           fail_ci_if_error: true

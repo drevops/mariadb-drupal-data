@@ -63,15 +63,6 @@ jobs:
           GOSS_FILES_PATH=tests/dgoss "${HOME}/bin/dgoss" run -i gosstestorg/gosstestimage:goss-test-tag
         continue-on-error: ${{ vars.CI_TEST_IGNORE_FAILURE == '1' }}
 
-      # QEMU provides foreign-architecture emulation for the multi-platform
-      # BATS tests. It is deliberately not installed on the amd64 job so that
-      # the job keeps testing the stock ci-runner environment used by
-      # consumers; the multi-platform tests skip themselves when emulation is
-      # not available.
-      - name: Set up QEMU
-        if: matrix.arch == 'arm64'
-        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4
-
       - name: Install BATS dependencies
         run: npm --prefix tests/bats ci
 

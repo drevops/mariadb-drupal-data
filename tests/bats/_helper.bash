@@ -129,27 +129,3 @@ host_platform() {
     *) echo "linux/$(uname -m)" ;;
   esac
 }
-
-# Get the Docker platform opposite to the host platform.
-foreign_platform() {
-  if [ "$(host_platform)" = "linux/amd64" ]; then
-    echo "linux/arm64"
-  else
-    echo "linux/amd64"
-  fi
-}
-
-# Ensure that a buildx builder capable of multi-platform builds exists and
-# make it the builder for subsequent buildx commands.
-prepare_multiarch_builder() {
-  if ! docker buildx inspect bats-multiarch >/dev/null 2>&1; then
-    docker buildx create --name bats-multiarch --driver docker-container >/dev/null
-  fi
-
-  export BUILDX_BUILDER=bats-multiarch
-}
-
-# Check that the current buildx builder can build for the given platform.
-builder_supports_platform() {
-  docker buildx inspect --bootstrap | grep -q "${1}"
-}

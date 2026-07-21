@@ -55,6 +55,7 @@ imports.
 ## Seeding image with your database
 
 1. Download the `seed.sh` script from this repository:
+
 ```shell
 curl -LO https://github.com/drevops/mariadb-drupal-data/releases/latest/download/seed.sh
 chmod +x seed.sh
@@ -82,8 +83,15 @@ Note that you should already be logged in to the registry as `seed.sh` will be p
 
 ### Running tests
 
+Tests run for the host platform by default.
+
 ```shell
-npm --prefix tests/bats install
+npm --prefix tests/bats ci
+
+# All tests.
+tests/bats/node_modules/.bin/bats tests/bats --tap
+
+# Individual test files.
 tests/bats/node_modules/.bin/bats tests/bats/image.bats --tap
 tests/bats/node_modules/.bin/bats tests/bats/seed.bats --tap
 ```

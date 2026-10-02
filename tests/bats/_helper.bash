@@ -25,10 +25,8 @@ setup() {
   CUR_DIR="$(pwd)"
   export CUR_DIR
 
-  # Directory where the init script will be running on.
-  # As a part of test setup, the local copy of Scaffold at the last commit is
-  # copied to this location. This means that during development of tests local
-  # changes need to be committed.
+  # BUILD_DIR receives this repository at its last commit, so local changes
+  # must be committed before the tests see them.
   export BUILD_DIR="${BUILD_DIR:-"${BATS_TEST_TMPDIR//\/\//\/}/drevops-mariadb-drupal-data-$(date +%s)"}"
   fixture_prepare_dir "${BUILD_DIR}"
 

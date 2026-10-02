@@ -240,7 +240,6 @@ docker exec "${cid}" bash -c "chown -R mysql /home/db-data && /bin/fix-permissio
 pass "Updated permissions on the seeded database files."
 
 task "Copy expanded database files to host"
-mkdir -p "${TMP_STRUCTURE_DIR}"
 docker cp "${cid}":/home/db-data/. "${TMP_STRUCTURE_DIR}/" >/dev/null
 [ ! -d "${TMP_STRUCTURE_DIR}/mysql" ] && fail "Unable to copy expanded database files to host" && ls -al "${TMP_STRUCTURE_DIR}" && exit 1
 pass "Copied expanded database files to host"

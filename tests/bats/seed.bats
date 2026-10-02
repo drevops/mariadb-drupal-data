@@ -2,12 +2,11 @@
 #
 # tests/bats/node_modules/.bin/bats --tap tests/bats/seed.bats
 #
-# Note that these tests run for the host platform by default. To run the
-# tests for other platforms, set the BUILDX_PLATFORMS and
-# DOCKER_DEFAULT_PLATFORM environment variables to the desired platform(s). But
-# make sure that the platform is supported by the Docker buildx driver.
+# These tests run for the host platform by default. To run them for another
+# platform, set DOCKER_DEFAULT_PLATFORM to that platform; the Docker buildx
+# driver must support it.
 #
-# BUILDX_PLATFORMS=linux/arm64 DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node_modules/.bin/bats --tap tests/bats/seed.bats
+# DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node_modules/.bin/bats --tap tests/bats/seed.bats
 #
 # The tests copy the source code at the last commit into the test directory,
 # so uncommitted changes are not tested.

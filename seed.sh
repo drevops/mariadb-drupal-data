@@ -163,7 +163,7 @@ start_container() {
   user=()
   [ -n "${2-}" ] && user=("--user=${2}")
 
-  cid=$(docker run "${user[@]}" -d "${1}" 2>"${LOG_DIR}/container-start.log")
+  cid="$(docker run "${user[@]}" -d "${1}" 2>"${LOG_DIR}/container-start.log")"
   cat "${LOG_DIR}/container-start.log" >>"${LOG_DIR}/${cid}.log" && rm "${LOG_DIR}/container-start.log" || true
 
   wait_for_db_service "${cid}" "${2-}"

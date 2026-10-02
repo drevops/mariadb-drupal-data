@@ -150,13 +150,13 @@ jobs:
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
-          images: drevops/mariadb-drupal-data
+          images: ${{ vars.DOCKER_IMAGE || 'drevops/mariadb-drupal-data' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           push: true
-          tags: drevops/mariadb-drupal-data:canary
+          tags: ${{ vars.DOCKER_IMAGE || 'drevops/mariadb-drupal-data' }}:canary
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64

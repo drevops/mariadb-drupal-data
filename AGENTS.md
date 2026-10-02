@@ -149,7 +149,7 @@ BUILDX_PLATFORMS=linux/arm64 DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node
 - Multi-platform builds: `linux/amd64,linux/arm64`
 - Required secrets: `DOCKER_USER`, `DOCKER_PASS`, `CODECOV_TOKEN`
 - Required vars: `RELEASE_VERSION_SCHEME` set to `calver`
-- Optional vars: `CI_LINT_IGNORE_FAILURE`, `CI_TEST_IGNORE_FAILURE` (set to '1' to ignore failures), `DOCKER_IMAGE` (release image name, defaults to `drevops/mariadb-drupal-data`)
+- Optional vars: `CI_LINT_IGNORE_FAILURE`, `CI_TEST_IGNORE_FAILURE` (set to '1' to ignore failures), `DOCKER_IMAGE` (published image name for releases and canary, defaults to `drevops/mariadb-drupal-data`)
 
 ## Important Notes
 

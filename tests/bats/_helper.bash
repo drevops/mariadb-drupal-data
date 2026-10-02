@@ -115,7 +115,7 @@ random_string_lower() {
 wait_mysql() {
   cid="${1?Missing container ID}"
   substep "Wait for mysql to start in container ${cid}."
-  if ! docker exec --user 1000 -i "${cid}" sh -c "until nc -z localhost 3306; do sleep 1; echo -n .; done; echo" 1>&3; then
+  if ! docker exec --user 1000 -i "${cid}" sh -c "until nc -z localhost 3306; do sleep 1; echo -n .; done; echo" >&3; then
     docker logs "${cid}"
     exit 1
   fi

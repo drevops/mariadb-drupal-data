@@ -26,7 +26,7 @@ DB_FILE="${DB_FILE:-${1}}"
 
 DST_IMAGE="${DST_IMAGE:-${2}}"
 
-# Exporting the databases needs a known mounted volume path, so phase 1 uses
+# Exporting the databases needs a known data directory path, so phase 1 uses
 # this same base image.
 BASE_IMAGE="${BASE_IMAGE:-drevops/mariadb-drupal-data:latest}"
 
@@ -80,7 +80,7 @@ restore_dockerignore() {
   pass "Restored .dockerignore from .dockerignore.bak"
 }
 
-# Collect logs and display them on script exit.
+# Collect logs and display them when the script exits with an error.
 cleanup() {
   if [ $? -ne 0 ]; then
     fail "Collecting logs after failure."

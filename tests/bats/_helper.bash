@@ -105,7 +105,7 @@ random_string_lower() {
   # in environments where SIGPIPE is ignored. Chunks are accumulated until
   # the requested length is reached.
   while [ "${#ret}" -lt "${len}" ]; do
-    ret="${ret}$(head -c 1024 /dev/urandom | env LC_CTYPE=C tr -dc 'a-z0-9')"
+    ret="${ret}$(head -c 1024 /dev/urandom | env LC_ALL=C tr -dc 'a-z0-9')"
   done
 
   echo "${ret:0:len}"

@@ -146,7 +146,7 @@ assert_db_system_tables_present() {
   if docker exec "${user[@]}" "${1}" /usr/bin/mysql -e "SHOW TABLES FROM information_schema;" | grep -q user_variables; then
     pass "Database system tables present."
   else
-    pass "Database system tables are not present in container ${1}"
+    fail "Database system tables are not present in container ${1}"
     exit 1
   fi
 }

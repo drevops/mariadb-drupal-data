@@ -63,7 +63,7 @@ load _helper
 
   substep "Start container from the seeded image ${dst_image} and request an upgrade."
   # Start container with a non-root user to imitate limited host permissions.
-  cid="$(docker run --user 1000 -d -e FORCE_MYSQL_UPGRADE=1 "${dst_image}")"
+  cid="$(docker run --user 1000 -d -e FORCE_MYSQL_UPGRADE=1 "${dst_image}" 2>&3)"
 
   wait_mysql "${cid}"
 
@@ -128,7 +128,7 @@ load _helper
 
   substep "Start container from the seeded image ${dst_image} and request an upgrade."
   # Start container with a non-root user to imitate limited host permissions.
-  cid="$(docker run --user 1000 -d -e FORCE_MYSQL_UPGRADE=1 "${dst_image}")"
+  cid="$(docker run --user 1000 -d -e FORCE_MYSQL_UPGRADE=1 "${dst_image}" 2>&3)"
 
   wait_mysql "${cid}"
 

@@ -28,9 +28,7 @@ load _helper
   docker buildx build --platform "${BUILDX_PLATFORMS}" --load -t "${base_image}" .
 
   substep "Start new detached container from the built base image."
-  run docker run --user 1000 -d "${base_image}" 2>/dev/null
-  assert_success
-  cid="${output}"
+  cid="$(docker run --user 1000 -d "${base_image}" 2>&3)"
   substep "Started container ${cid}."
 
   substep "Assert that the database directory is present in the base image."
@@ -75,9 +73,7 @@ load _helper
   substep "Tagged committed image ${committed_image_id} as ${new_image}."
 
   substep "Start a new container from the tagged committed image ${new_image}."
-  run docker run --user 1000 -d "${new_image}"
-  assert_success
-  new_cid="${output}"
+  new_cid="$(docker run --user 1000 -d "${new_image}" 2>&3)"
   substep "Started new container ${new_cid}."
 
   wait_mysql "${new_cid}"

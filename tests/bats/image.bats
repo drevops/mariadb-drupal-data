@@ -31,7 +31,7 @@ load _helper
   run docker run --user 1000 -d "${base_image}" 2>/dev/null
   assert_success
   cid="${output}"
-  substep "Started container ${cid}"
+  substep "Started container ${cid}."
 
   substep "Assert that the database directory is present in the base image."
   docker exec --user 1000 "${cid}" test -d /home/db-data
@@ -78,7 +78,7 @@ load _helper
   run docker run --user 1000 -d "${new_image}"
   assert_success
   new_cid="${output}"
-  substep "Started new container ${new_cid}"
+  substep "Started new container ${new_cid}."
 
   wait_mysql "${new_cid}"
 

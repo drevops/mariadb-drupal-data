@@ -9,7 +9,7 @@
 
 [![GitHub Issues](https://img.shields.io/github/issues/drevops/mariadb-drupal-data.svg)](https://github.com/drevops/mariadb-drupal-data/issues)
 [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/drevops/mariadb-drupal-data.svg)](https://github.com/drevops/mariadb-drupal-data/pulls)
-[![Test and Build](https://github.com/drevops/mariadb-drupal-data/actions/workflows/test.yml/badge.svg)](https://github.com/drevops/mariadb-drupal-data/actions/workflows/test.yml)
+[![Test](https://github.com/drevops/mariadb-drupal-data/actions/workflows/test.yml/badge.svg)](https://github.com/drevops/mariadb-drupal-data/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/drevops/mariadb-drupal-data/graph/badge.svg?token=JYSIXUF6QX)](https://codecov.io/gh/drevops/mariadb-drupal-data)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/drevops/mariadb-drupal-data)
 ![LICENSE](https://img.shields.io/github/license/drevops/mariadb-drupal-data)
@@ -35,7 +35,7 @@ Image consumers download the image and start containers with instantaneously
 available data (no time-consuming database imports required).
 
 Technically, the majority of the functionality is relying on upstream [`uselagoon/mariadb-drupal`](https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb-drupal/10.11.Dockerfile) Docker image.
-[Entrypoint script](entrypoint.bash)) had to be copied from [upstream script](https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb/entrypoints/9999-mariadb-init.bash) and adjusted to support custom data directory.
+[Entrypoint script](entrypoint.bash) had to be copied from [upstream script](https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb/entrypoints/9999-mariadb-init.bash) and adjusted to support custom data directory.
 
 ## Use case
 

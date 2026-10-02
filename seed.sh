@@ -143,7 +143,7 @@ assert_db_system_tables_present() {
   user=()
   [ -n "${2-}" ] && user=("--user=${2}")
 
-  if docker exec "${user[@]}" "${1}" /usr/bin/mysql -e "show tables from information_schema;" | grep -q user_variables; then
+  if docker exec "${user[@]}" "${1}" /usr/bin/mysql -e "SHOW TABLES FROM information_schema;" | grep -q user_variables; then
     pass "Database system tables present."
   else
     pass "Database system tables are not present in container ${1}"
@@ -155,7 +155,7 @@ assert_db_was_imported() {
   user=()
   [ -n "${2-}" ] && user=("--user=${2}")
 
-  if docker exec "${user[@]}" "${1}" /usr/bin/mysql -e "show tables;" | grep -q users; then
+  if docker exec "${user[@]}" "${1}" /usr/bin/mysql -e "SHOW TABLES;" | grep -q users; then
     pass "Imported database exists."
   else
     fail "Imported database does not exist in container ${1}"

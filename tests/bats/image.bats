@@ -47,17 +47,17 @@ load _helper
   assert_output_contains "drupal"
 
   substep "Assert that the created table is not present in the container."
-  run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "USE 'drupal'; show tables like 'mytesttable';"
+  run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "USE drupal; SHOW TABLES LIKE 'mytesttable';"
   assert_success
   assert_output_not_contains "mytesttable"
 
   step "Assert capturing of the data into the image."
 
   substep "Create a table in the database."
-  docker exec --user 1000 "${cid}" /usr/bin/mysql -e "USE 'drupal'; CREATE TABLE mytesttable(c CHAR(20) CHARACTER SET utf8 COLLATE utf8_bin);"
+  docker exec --user 1000 "${cid}" /usr/bin/mysql -e "USE drupal; CREATE TABLE mytesttable(c CHAR(20) CHARACTER SET utf8 COLLATE utf8_bin);"
 
   substep "Assert that the table is present after creation."
-  run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "USE 'drupal'; show tables like 'mytesttable';"
+  run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "USE drupal; SHOW TABLES LIKE 'mytesttable';"
   assert_success
   assert_output_contains "mytesttable"
 
@@ -84,7 +84,7 @@ load _helper
   assert_output_contains "drupal"
 
   substep "Assert that the table is present after restart."
-  run docker exec --user 1000 "${new_cid}" /usr/bin/mysql -e "USE 'drupal'; show tables like 'mytesttable';"
+  run docker exec --user 1000 "${new_cid}" /usr/bin/mysql -e "USE drupal; SHOW TABLES LIKE 'mytesttable';"
   assert_success
   assert_output_contains "mytesttable"
 }

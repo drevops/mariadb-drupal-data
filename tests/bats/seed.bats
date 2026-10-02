@@ -50,7 +50,7 @@ load _helper
   wait_mysql "${cid}"
 
   substep "Assert that data was captured into the new image."
-  run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "use drupal;show tables;" drupal
+  run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "USE drupal; SHOW TABLES;" drupal
   assert_success
   assert_output_contains "users"
 
@@ -73,7 +73,7 @@ load _helper
   assert_output_contains "starting mysql upgrade"
 
   substep "Assert that data is present in the new image after the upgrade."
-  run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "use drupal;show tables;" drupal
+  run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "USE drupal; SHOW TABLES;" drupal
   assert_success
   assert_output_contains "users"
 }
@@ -115,7 +115,7 @@ load _helper
   wait_mysql "${cid}"
 
   substep "Assert that data was captured into the new image."
-  run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "use drupal;show tables;" drupal
+  run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "USE drupal; SHOW TABLES;" drupal
   assert_success
   assert_output_contains "users"
 
@@ -138,7 +138,7 @@ load _helper
   assert_output_contains "starting mysql upgrade"
 
   substep "Assert that data is present in the new image after the upgrade."
-  run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "use drupal;show tables;" drupal
+  run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "USE drupal; SHOW TABLES;" drupal
   assert_success
   assert_output_contains "users"
 }

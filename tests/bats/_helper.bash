@@ -46,7 +46,7 @@ setup() {
   # Print debug information if "--verbose-run" is passed.
   # LCOV_EXCL_START
   if [ "${BATS_VERBOSE_RUN-}" = "1" ]; then
-    echo "BUILD_DIR: ${BUILD_DIR}" >&3
+    debug "BUILD_DIR: ${BUILD_DIR}"
   fi
   # LCOV_EXCL_END
 

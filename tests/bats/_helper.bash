@@ -55,7 +55,7 @@ setup() {
 
   # Due to a limitation in buildx driver to build multi-platform images in some
   # OSes (like MacOS), we are building for a single platform by default.
-  export BUILDX_PLATFORMS="${DOCKER_DEFAULT_PLATFORM:-linux/amd64}"
+  export BUILDX_PLATFORMS="${DOCKER_DEFAULT_PLATFORM}"
   step "Building for ${BUILDX_PLATFORMS} platforms."
   export DOCKER_BUILDKIT=1
 

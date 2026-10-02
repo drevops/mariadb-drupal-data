@@ -53,7 +53,7 @@ Shell script tests use BATS:
 ### Important Patterns
 
 - Database files must be in `/home/db-data` (not `/var/lib/mysql`)
-- Upstream base image version follows [uselagoon/mariadb-drupal tags](https://hub.docker.com/r/uselagoon/mariadb-drupal/tags)
+- Upstream base image version follows [uselagoon/mariadb-10.11-drupal tags](https://hub.docker.com/r/uselagoon/mariadb-10.11-drupal/tags)
 - The entrypoint script is minimally modified for easy upstream updates
 - Containers typically run as user `1000` (not `mysql`) in production
 

@@ -51,10 +51,12 @@ load _helper
 
   substep "Assert that data was captured into the new image."
   run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "use drupal;show tables;" drupal
+  assert_success
   assert_output_contains "users"
 
   substep "Assert that the mysql upgrade was skipped by default."
   run docker logs "${cid}"
+  assert_success
   assert_output_not_contains "starting mysql upgrade"
 
   step "Assert mysql upgrade works in container started from already seeded image."
@@ -67,10 +69,12 @@ load _helper
 
   substep "Assert that the mysql upgrade was performed."
   run docker logs "${cid}"
+  assert_success
   assert_output_contains "starting mysql upgrade"
 
   substep "Assert that data is present in the new image after the upgrade."
   run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "use drupal;show tables;" drupal
+  assert_success
   assert_output_contains "users"
 }
 
@@ -112,10 +116,12 @@ load _helper
 
   substep "Assert that data was captured into the new image."
   run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "use drupal;show tables;" drupal
+  assert_success
   assert_output_contains "users"
 
   substep "Assert that the mysql upgrade was skipped by default."
   run docker logs "${cid}"
+  assert_success
   assert_output_not_contains "starting mysql upgrade"
 
   step "Assert mysql upgrade works in container started from already seeded image."
@@ -128,9 +134,11 @@ load _helper
 
   substep "Assert that the mysql upgrade was performed."
   run docker logs "${cid}"
+  assert_success
   assert_output_contains "starting mysql upgrade"
 
   substep "Assert that data is present in the new image after the upgrade."
   run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "use drupal;show tables;" drupal
+  assert_success
   assert_output_contains "users"
 }

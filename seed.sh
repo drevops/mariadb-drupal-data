@@ -105,7 +105,7 @@ trap cleanup EXIT
 
 log_container() {
   name="${1?Missing log name}"
-  prefix=${2:-}
+  prefix="${2-}"
 
   mkdir -p "${LOG_DIR}" >/dev/null
   log_file="${LOG_DIR}/${prefix}${name}.log"

@@ -46,12 +46,12 @@ load _helper
   substep "Assert that the database is present in the container."
   run docker exec --user 1000 "${cid}" mysql -e "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'drupal';"
   assert_success
-  assert_contains "drupal" "${output}"
+  assert_output_contains "drupal"
 
   substep "Assert that the created table is not present in the container."
   run docker exec --user 1000 "${cid}" mysql -e "USE 'drupal'; show tables like 'mytesttable';"
   assert_success
-  assert_not_contains "mytesttable" "${output}"
+  assert_output_not_contains "mytesttable"
 
   step "Assert capturing of the data into the image."
 
@@ -61,7 +61,7 @@ load _helper
   substep "Assert that the table is present after creation."
   run docker exec --user 1000 "${cid}" mysql -e "USE 'drupal'; show tables like 'mytesttable';"
   assert_success
-  assert_contains "mytesttable" "${output}"
+  assert_output_contains "mytesttable"
 
   substep "Commit an image from the last container and get the image ID."
   run docker commit "${cid}"
@@ -85,10 +85,10 @@ load _helper
   substep "Assert that the database is present after restart."
   run docker exec --user 1000 "${new_cid}" mysql -e "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'drupal';"
   assert_success
-  assert_contains "drupal" "${output}"
+  assert_output_contains "drupal"
 
   substep "Assert that the table is present after restart."
   run docker exec --user 1000 "${new_cid}" mysql -e "USE 'drupal'; show tables like 'mytesttable';"
   assert_success
-  assert_contains "mytesttable" "${output}"
+  assert_output_contains "mytesttable"
 }

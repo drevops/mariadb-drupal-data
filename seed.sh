@@ -111,9 +111,9 @@ log_container() {
   log_file="${LOG_DIR}/${prefix}${name}.log"
 
   if [ -n "${LOG_IS_VERBOSE}" ]; then
-    docker logs "${1}" | tee -a "${log_file}"
+    docker logs "${name}" | tee -a "${log_file}"
   else
-    docker logs "${1}" &>>"${log_file}"
+    docker logs "${name}" &>>"${log_file}"
   fi
 }
 

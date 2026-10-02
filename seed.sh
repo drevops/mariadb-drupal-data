@@ -239,7 +239,7 @@ assert_db_was_imported "${cid}"
 pass "Upgraded database after import."
 
 task "Update permissions on the seeded database files."
-docker exec "${cid}" bash -c "chown -R mysql /home/db-data && /bin/fix-permissions /home/db-data" || true
+docker exec "${cid}" bash -c "chown -R mysql:mysql /home/db-data && /bin/fix-permissions /home/db-data" || true
 pass "Updated permissions on the seeded database files."
 
 task "Copy expanded database files to host"

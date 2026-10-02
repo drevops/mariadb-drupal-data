@@ -3,7 +3,7 @@
 # Seed image with a database from a file.
 # @see https://github.com/drevops/mariadb-drupal-data/blob/main/seed.sh
 #
-# The seeding process has 3 phases:
+# The seeding process has 3 stages:
 # 1. Create extracted DB files by starting a temporary container and
 #    importing the database.
 # 2. Build a new image from the base image and extracted DB files.
@@ -26,7 +26,7 @@ DB_FILE="${DB_FILE:-${1}}"
 
 DST_IMAGE="${DST_IMAGE:-${2}}"
 
-# Exporting the databases needs a known data directory path, so phase 1 uses
+# Exporting the databases needs a known data directory path, so Stage 1 uses
 # this same base image.
 BASE_IMAGE="${BASE_IMAGE:-drevops/mariadb-drupal-data:latest}"
 

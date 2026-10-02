@@ -43,10 +43,10 @@ Shell script tests use BATS:
    - Supports `MARIADB_COPY_DATA_DIR_SOURCE` for pre-filling data
    - Includes `FORCE_MYSQL_UPGRADE` flag for forcing upgrades
 
-3. **seed.sh** - Three-phase database seeding script:
-   - **Phase 1**: Import SQL dump into temporary container and extract database files
-   - **Phase 2**: Build new image with extracted database files using `docker buildx`
-   - **Phase 3**: Verify database exists in the new image
+3. **seed.sh** - 3-stage database seeding script:
+   - **Stage 1**: Import SQL dump into temporary container and extract database files
+   - **Stage 2**: Build new image with extracted database files using `docker buildx`
+   - **Stage 3**: Verify database exists in the new image
    - Builds images for the host platform by default; multi-platform builds (linux/amd64, linux/arm64) are opt-in via `DESTINATION_PLATFORMS`
    - Uses `docker buildx` to push directly to registry during build
 

@@ -163,6 +163,7 @@ assert_db_was_imported() {
   fi
 }
 
+# Sets 'cid' to the ID of the started container.
 start_container() {
   task "Start container from the image ${1}"
 
@@ -176,10 +177,6 @@ start_container() {
   assert_db_system_tables_present "${cid}" "${2-}"
 
   pass "Started container ${cid}"
-}
-
-get_started_container_id() {
-  docker ps -q --filter ancestor="${1}" --filter status=running | head -n 1
 }
 
 stop_container() {
@@ -227,7 +224,6 @@ docker pull "${BASE_IMAGE}"
 pass "Pulled the base image ${BASE_IMAGE}."
 
 start_container "${BASE_IMAGE}"
-cid="$(get_started_container_id "${BASE_IMAGE}")"
 
 task "Import database from the ${DB_FILE} file."
 cat "${DB_FILE}" | docker exec -i "${cid}" /usr/bin/mysql
@@ -268,7 +264,6 @@ pass "Built image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s) from ${B
 info "Stage 3: Test image"
 
 start_container "${DST_IMAGE}" 1000
-cid="$(get_started_container_id "${DST_IMAGE}")"
 assert_db_was_imported "${cid}" 1000
 stop_container "${cid}"
 

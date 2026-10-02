@@ -62,10 +62,12 @@ jobs:
         run: |
           GOSS_VERSION=v0.4.9
           mkdir -p "${HOME}/bin"
-          curl -fsSL "https://github.com/goss-org/goss/releases/download/${GOSS_VERSION}/goss-linux-${{ matrix.arch }}" -o "${HOME}/bin/goss"
+          curl -fsSL "https://github.com/goss-org/goss/releases/download/${GOSS_VERSION}/goss-linux-${GOSS_ARCH}" -o "${HOME}/bin/goss"
           curl -fsSL "https://github.com/goss-org/goss/releases/download/${GOSS_VERSION}/dgoss" -o "${HOME}/bin/dgoss"
           chmod +rx "${HOME}/bin/goss" "${HOME}/bin/dgoss"
           "${HOME}/bin/goss" --version
+        env:
+          GOSS_ARCH: ${{ matrix.arch }}
 
       - name: Build Docker image
         run: docker build -t gosstestorg/gosstestimage:goss-test-tag .

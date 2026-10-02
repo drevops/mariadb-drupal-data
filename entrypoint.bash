@@ -3,7 +3,7 @@
 # Entrypoint to start mysql service with custom data directory.
 #
 # This file is minimally modified to be easily updatable from the upstream.
-# @see https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb/entrypoints/9999-mariadb-init.bash
+# @see https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb/entrypoints/9999-mariadb-init.10.bash
 # LCOV_EXCL_START
 set -eo pipefail
 

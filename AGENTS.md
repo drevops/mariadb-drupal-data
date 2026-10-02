@@ -37,7 +37,7 @@ Shell script tests use BATS:
    - Replaces entrypoint script to support custom data directory
    - Overrides CMD to use `--datadir=/home/db-data`
 
-2. **entrypoint.bash** - Modified from [upstream](https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb/entrypoints/9999-mariadb-init.bash):
+2. **entrypoint.bash** - Modified from [upstream](https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb/entrypoints/9999-mariadb-init.10.bash):
    - Supports `MARIADB_DATA_DIR` environment variable
    - Handles database initialization in custom location
    - Supports `MARIADB_COPY_DATA_DIR_SOURCE` for pre-filling data

@@ -20,7 +20,7 @@ load _helper
   tag="${TEST_DOCKER_TAG_PREFIX}$(random_string_lower)"
   # Using a local image for this test. The image will be loaded into the Docker
   # engine from the buildx cache below.
-  base_image="testorg/tesimagebase:${tag}"
+  base_image="testorg/testimagebase:${tag}"
 
   step "Prepare base image."
 

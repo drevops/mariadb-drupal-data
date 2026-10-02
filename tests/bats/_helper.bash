@@ -36,7 +36,7 @@ setup() {
   # As a part of test setup, the local copy of Scaffold at the last commit is
   # copied to this location. This means that during development of tests local
   # changes need to be committed.
-  export BUILD_DIR="${BUILD_DIR:-"${BATS_TEST_TMPDIR//\/\//\/}/drevops-maria-drupal-data-$(date +%s)"}"
+  export BUILD_DIR="${BUILD_DIR:-"${BATS_TEST_TMPDIR//\/\//\/}/drevops-mariadb-drupal-data-$(date +%s)"}"
   fixture_prepare_dir "${BUILD_DIR}"
 
   # Copy code at the last commit.

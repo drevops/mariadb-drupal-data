@@ -76,7 +76,7 @@ note() { printf "       %s\n" "${1}"; }
 restore_dockerignore() {
   [ ! -f ".dockerignore.bak" ] && return
 
-  note "Restoring .dockerignore from .dockerignore.bak"
+  task "Restore .dockerignore from .dockerignore.bak"
   mv .dockerignore.bak .dockerignore
 
   if [ ! -f ".dockerignore" ]; then
@@ -199,7 +199,7 @@ rm -Rf "${TMP_STRUCTURE_DIR}" >/dev/null
 mkdir -p "${TMP_STRUCTURE_DIR}" >/dev/null
 
 if [ -n "${DOCKER_DEFAULT_PLATFORM}" ]; then
-  task "Source platform architecture: ${DOCKER_DEFAULT_PLATFORM}"
+  note "Source platform architecture: ${DOCKER_DEFAULT_PLATFORM}"
 fi
 
 # Normalize image - add ":latest" if tag was not provided.
@@ -209,7 +209,7 @@ note "Destination image: ${DST_IMAGE}"
 note "Destination platform(s): ${DESTINATION_PLATFORMS}"
 
 if [ -f ".dockerignore" ]; then
-  note "Moving .dockerignore to .dockerignore.bak"
+  task "Move .dockerignore to .dockerignore.bak"
   mv .dockerignore .dockerignore.bak
   if [ ! -f ".dockerignore.bak" ]; then
     fail "Unable to move .dockerignore to .dockerignore.bak"
@@ -220,7 +220,7 @@ fi
 
 info "Stage 1: Produce database structure files from dump file"
 
-task "Pulling the base image ${BASE_IMAGE}."
+task "Pull the base image ${BASE_IMAGE}."
 docker pull "${BASE_IMAGE}"
 pass "Pulled the base image ${BASE_IMAGE}."
 

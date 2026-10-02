@@ -83,13 +83,13 @@ teardown() {
 step() {
   debug ""
   # Using prefix different from command prefix in SUT for easy debug.
-  debug "**> STEP: $1"
+  debug "**> STEP: ${1}"
 }
 
 # Print sub-step.
 substep() {
   debug ""
-  debug "  > $1"
+  debug "  > ${1}"
 }
 
 # Run bats with `--tap` option to debug the output.

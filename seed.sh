@@ -21,10 +21,10 @@ set -eu
 [ -n "${DEBUG:-}" ] && set -x
 
 # Database dump file as the first argument to the script.
-DB_FILE="${DB_FILE:-$1}"
+DB_FILE="${DB_FILE:-${1}}"
 
 # Destination image as the second argument to the script.
-DST_IMAGE="${DST_IMAGE:-$2}"
+DST_IMAGE="${DST_IMAGE:-${2}}"
 
 # Base image to start with.
 # We have to use the same base image for phase 1 because we need a known mounted
@@ -60,18 +60,18 @@ LOG_IS_VERBOSE="${LOG_IS_VERBOSE:-}"
 # ------------------------------------------------------------------------------
 
 # @formatter:off
-info() { [ -z "${TERM_NO_COLOR:-}" ] && tput colors >/dev/null 2>&1 && printf "\n[\033[36mINFO\033[0m] %s\n\n" "$1" || printf "\n[INFO] %s\n" "$1"; }
-task() { [ -z "${TERM_NO_COLOR:-}" ] && tput colors >/dev/null 2>&1 && printf "[\033[34mTASK\033[0m] %s\n" "$1" || printf "[TASK] %s\n" "$1"; }
-pass() { [ -z "${TERM_NO_COLOR:-}" ] && tput colors >/dev/null 2>&1 && printf "[ \033[32mOK\033[0m ] %s\n" "$1" || printf "[ OK ] %s\n" "$1"; }
-fail() { [ -z "${TERM_NO_COLOR:-}" ] && tput colors >/dev/null 2>&1 && printf "\033[31m[FAIL] %s\033[0m\n" "$1" || printf "[FAIL] %s\n" "$1"; }
-note() { printf "       %s\n" "$1"; }
+info() { [ -z "${TERM_NO_COLOR:-}" ] && tput colors >/dev/null 2>&1 && printf "\n[\033[36mINFO\033[0m] %s\n\n" "${1}" || printf "\n[INFO] %s\n" "${1}"; }
+task() { [ -z "${TERM_NO_COLOR:-}" ] && tput colors >/dev/null 2>&1 && printf "[\033[34mTASK\033[0m] %s\n" "${1}" || printf "[TASK] %s\n" "${1}"; }
+pass() { [ -z "${TERM_NO_COLOR:-}" ] && tput colors >/dev/null 2>&1 && printf "[ \033[32mOK\033[0m ] %s\n" "${1}" || printf "[ OK ] %s\n" "${1}"; }
+fail() { [ -z "${TERM_NO_COLOR:-}" ] && tput colors >/dev/null 2>&1 && printf "\033[31m[FAIL] %s\033[0m\n" "${1}" || printf "[FAIL] %s\n" "${1}"; }
+note() { printf "       %s\n" "${1}"; }
 # @formatter:on
 
 [ -z "${DB_FILE}" ] && fail "Path to the database dump file must be provided as the first argument." && exit 1
 [ -z "${DST_IMAGE}" ] && fail "Destination Docker image name must be provided as the second argument." && exit 1
 [ ! -f "${DB_FILE}" ] && fail "Specified database dump file ${DB_FILE} does not exist." && exit 1
-[ "${BASE_IMAGE##*/}" = "$BASE_IMAGE" ] && fail "${BASE_IMAGE} should be in a format myorg/myimage." && exit 1
-[ "${DST_IMAGE##*/}" = "$DST_IMAGE" ] && fail "${DST_IMAGE} should be in a format myorg/myimage." && exit 1
+[ "${BASE_IMAGE##*/}" = "${BASE_IMAGE}" ] && fail "${BASE_IMAGE} should be in a format myorg/myimage." && exit 1
+[ "${DST_IMAGE##*/}" = "${DST_IMAGE}" ] && fail "${DST_IMAGE} should be in a format myorg/myimage." && exit 1
 
 # Collect logs and display them on script exit.
 cleanup() {
@@ -163,8 +163,8 @@ start_container() {
   user=()
   [ -n "${2-}" ] && user=("--user=${2}")
 
-  cid=$(docker run "${user[@]}" -d "${1}" 2>"$LOG_DIR"/container-start.log)
-  cat "${LOG_DIR}"/container-start.log >>"$LOG_DIR/${cid}.log" && rm "${LOG_DIR}"/container-start.log || true
+  cid=$(docker run "${user[@]}" -d "${1}" 2>"${LOG_DIR}"/container-start.log)
+  cat "${LOG_DIR}"/container-start.log >>"${LOG_DIR}/${cid}.log" && rm "${LOG_DIR}"/container-start.log || true
 
   wait_for_db_service "${cid}" "${2-}"
   assert_db_system_tables_present "${cid}" "${2-}"

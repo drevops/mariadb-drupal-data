@@ -127,7 +127,7 @@ wait_for_db_service() {
   if ! docker exec "${user[@]}" -i "${cid}" sh -c "until nc -z localhost 3306; do sleep 1; echo -n .; done; echo"; then
     fail "MySQL service did not start successfully."
     log_container "${cid}"
-    return 1
+    exit 1
   fi
   log_container "${cid}"
   pass "MySQL is running."

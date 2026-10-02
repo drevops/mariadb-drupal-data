@@ -126,5 +126,15 @@ Renovate bot is used to update dependencies. It creates a PR with the changes
 and automatically merges it if CI passes. These changes are then released as
 a `canary` version.
 
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for local development setup and the
+linting and testing commands.
+
+## Updating
+
+To pull the latest infrastructure from the template into this project, ask
+Claude Code to "update scaffold" - see [`AGENTS.md`](AGENTS.md) for details.
+
 ---
 _This repository was created using the [Scaffold](https://getscaffold.dev/) project template_

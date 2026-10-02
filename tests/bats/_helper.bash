@@ -4,7 +4,6 @@
 # Bats test helpers.
 #
 # shellcheck disable=SC2119,SC2120
-#!/usr/bin/env bash
 #
 # Helpers related to common testing functionality.
 #

@@ -4,3 +4,5 @@
 /.gitattributes  export-ignore
 /.github         export-ignore
 /.gitignore      export-ignore
+/logo.png        export-ignore
+/renovate.json   export-ignore

@@ -184,6 +184,7 @@ stop_container() {
   # Log container output before stopping it into a separate log file for debugging.
   log_container "${1}" "stopped-"
   docker stop "${1}" >/dev/null
+  docker rm -v "${1}" >/dev/null
   pass "Stopped and removed container ${1}"
 }
 

@@ -29,8 +29,8 @@ setup() {
   setup_mock
 
   # Current directory where the test is run from.
-  # shellcheck disable=SC2155
-  export CUR_DIR="$(pwd)"
+  CUR_DIR="$(pwd)"
+  export CUR_DIR
 
   # Directory where the init script will be running on.
   # As a part of test setup, the local copy of Scaffold at the last commit is

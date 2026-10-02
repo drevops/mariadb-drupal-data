@@ -1,7 +1,5 @@
 #!/usr/bin/env bats
 #
-# Test functionality.
-#
 # tests/bats/node_modules/.bin/bats --tap tests/bats/image.bats
 #
 # Note that these tests run for the host platform by default. To run the
@@ -11,15 +9,15 @@
 #
 # BUILDX_PLATFORMS=linux/arm64 DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node_modules/.bin/bats --tap tests/bats/image.bats
 #
-# Make sure to commit the source code change before running the tests as it
-# copies the source code at the last commit to the test directory.
+# The tests copy the source code at the last commit into the test directory,
+# so uncommitted changes are not tested.
 
 load _helper
 
 @test "Data is preserved in an image captured from the running container" {
   tag="${TEST_DOCKER_TAG_PREFIX}$(random_string_lower)"
-  # Using a local image for this test. The image will be loaded into the Docker
-  # engine from the buildx cache below.
+  # The base image is local; the buildx build below loads it into the Docker
+  # engine from the buildx cache.
   base_image="testorg/testimagebase:${tag}"
 
   step "Prepare base image."
@@ -34,8 +32,8 @@ load _helper
   substep "Assert that the database directory is present in the base image."
   docker exec --user 1000 "${cid}" test -d /home/db-data
 
-  # The entrypoint script should have created the initial database structure
-  # and the 'drupal' database directory, but not the database tables.
+  # The entrypoint script creates the initial database structure and the
+  # 'drupal' database directory, but not the database tables.
   substep "Assert that the database directory is present, but the database directory is empty in the base image."
   docker exec --user 1000 "${cid}" bash -c '[ -d /home/db-data ] && [ -z "$(ls -A /home/db-data/drupal/users*)" ]'
 

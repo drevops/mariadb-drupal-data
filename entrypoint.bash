@@ -57,8 +57,8 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
   if [ -d ${MARIADB_DATA_DIR:-/var/lib/mysql} ] && [ "$(ls -A "${MARIADB_DATA_DIR:-/var/lib/mysql}")" ]; then
     echo "MySQL directory already present, skipping creation"
 
-    # @note: Added re-creation of the config for descendant images to have
-    # the same password-less client login experience as for the parent image.
+    # @note: Recreate .my.cnf so descendant images have the same
+    # password-less client login as the parent image.
     if [ ! -f ${MARIADB_DATA_DIR:-/var/lib/mysql}/.my.cnf ]; then
       echo "[client]" >> ${MARIADB_DATA_DIR:-/var/lib/mysql}/.my.cnf
       echo "user=root" >> ${MARIADB_DATA_DIR:-/var/lib/mysql}/.my.cnf
@@ -78,7 +78,7 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
       sleep $MARIADB_INIT_PERIOD_SECONDS
     done
 
-    # @note: Added a flag to force upgrade.
+    # @note: mariadb-upgrade runs only when FORCE_MYSQL_UPGRADE is 1.
     if [ "${FORCE_MYSQL_UPGRADE:-}" = "1" ]; then
       echo "starting mysql upgrade"
       # @note: mariadb-upgrade may fail on the first run due to the unresolved

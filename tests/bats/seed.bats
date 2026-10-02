@@ -1,7 +1,5 @@
 #!/usr/bin/env bats
 #
-# Test functionality.
-#
 # tests/bats/node_modules/.bin/bats --tap tests/bats/seed.bats
 #
 # Note that these tests run for the host platform by default. To run the
@@ -11,8 +9,8 @@
 #
 # BUILDX_PLATFORMS=linux/arm64 DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node_modules/.bin/bats --tap tests/bats/seed.bats
 #
-# Make sure to commit the source code change before running the tests as it
-# copies the source code at the last commit to the test directory.
+# The tests copy the source code at the last commit into the test directory,
+# so uncommitted changes are not tested.
 #
 # shellcheck disable=SC2030,SC2031
 
@@ -34,17 +32,15 @@ load _helper
 
   step "Assert seeding without mysql upgrade works."
 
-  # Pass the destination platform to the seeding script.
-  # Note that the name for the variable `BUILDX_PLATFORMS` in the test was
-  # chosen to be different from the `DESTINATION_PLATFORMS` in the seeding
-  # script to separate building images when preparing the test environment
-  # from the seeding process.
+  # The test's `BUILDX_PLATFORMS` is named differently from the seeding
+  # script's `DESTINATION_PLATFORMS` to keep test-environment image builds
+  # separate from the seeding process.
   export DESTINATION_PLATFORMS="${BUILDX_PLATFORMS}"
   substep "Run database seeding script for ${dst_image} from the base image ${BASE_IMAGE} for destination platform(s) ${DESTINATION_PLATFORMS}."
   ./seed.sh "${file}" "${dst_image}" >&3
 
   substep "Start container from the seeded image ${dst_image}."
-  # Start container with a non-root user to imitate limited host permissions.
+  # The container runs as a non-root user to imitate limited host permissions.
   cid="$(docker run --user 1000 -d "${dst_image}" 2>&3)"
 
   wait_mysql "${cid}"
@@ -62,7 +58,7 @@ load _helper
   step "Assert mysql upgrade works in container started from already seeded image."
 
   substep "Start container from the seeded image ${dst_image} and request an upgrade."
-  # Start container with a non-root user to imitate limited host permissions.
+  # The container runs as a non-root user to imitate limited host permissions.
   cid="$(docker run --user 1000 -d -e FORCE_MYSQL_UPGRADE=1 "${dst_image}" 2>&3)"
 
   wait_mysql "${cid}"
@@ -98,18 +94,16 @@ load _helper
 
   step "Assert seeding without mysql upgrade works."
 
-  # Pass the destination platform to the seeding script.
-  # Note that the name for the variable `BUILDX_PLATFORMS` in the test was
-  # chosen to be different from the `DESTINATION_PLATFORMS` in the seeding
-  # script to separate building images when preparing the test environment
-  # from the seeding process.
+  # The test's `BUILDX_PLATFORMS` is named differently from the seeding
+  # script's `DESTINATION_PLATFORMS` to keep test-environment image builds
+  # separate from the seeding process.
   export DESTINATION_PLATFORMS="${BUILDX_PLATFORMS}"
   substep "Run database seeding script for ${dst_image} from the base image ${BASE_IMAGE} for destination platform(s) ${DESTINATION_PLATFORMS}."
   ./seed.sh "${file}" "${dst_image}" >&3
   assert_file_not_exists .dockerignore.bak
 
   substep "Start container from the seeded image ${dst_image}."
-  # Start container with a non-root user to imitate limited host permissions.
+  # The container runs as a non-root user to imitate limited host permissions.
   cid="$(docker run --user 1000 -d "${dst_image}" 2>&3)"
 
   wait_mysql "${cid}"
@@ -127,7 +121,7 @@ load _helper
   step "Assert mysql upgrade works in container started from already seeded image."
 
   substep "Start container from the seeded image ${dst_image} and request an upgrade."
-  # Start container with a non-root user to imitate limited host permissions.
+  # The container runs as a non-root user to imitate limited host permissions.
   cid="$(docker run --user 1000 -d -e FORCE_MYSQL_UPGRADE=1 "${dst_image}" 2>&3)"
 
   wait_mysql "${cid}"

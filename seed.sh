@@ -4,9 +4,11 @@
 # @see https://github.com/drevops/mariadb-drupal-data/blob/main/seed.sh
 #
 # The seeding process has 3 phases:
-# 1. Create extracted DB files by starting a temporary container and importing the database.
+# 1. Create extracted DB files by starting a temporary container and
+#    importing the database.
 # 2. Build a new image from the base image and extracted DB files.
-# 3. Start a container from the new image and verify that the database was imported.
+# 3. Start a container from the new image and verify that the database was
+#    imported.
 #
 # Usage:
 # ./seed.sh path/to/db.sql myorg/myimage:latest
@@ -20,41 +22,32 @@
 set -eu
 [ -n "${DEBUG:-}" ] && set -x
 
-# Database dump file as the first argument to the script.
 DB_FILE="${DB_FILE:-${1}}"
 
-# Destination image as the second argument to the script.
 DST_IMAGE="${DST_IMAGE:-${2}}"
 
-# Base image to start with.
-# We have to use the same base image for phase 1 because we need a known mounted
-# volume path to export databases.
+# Exporting the databases needs a known mounted volume path, so phase 1 uses
+# this same base image.
 BASE_IMAGE="${BASE_IMAGE:-drevops/mariadb-drupal-data:latest}"
 
-# Docker target platform architecture.
-# Note that some shells report the platform incorrectly. In such cases, run
-# as `DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest`
+# Some shells report the platform incorrectly; in such cases, run as
+# `DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest`
 DOCKER_DEFAULT_PLATFORM="${DOCKER_DEFAULT_PLATFORM:-}"
 
-# Host platform in Docker notation, detected from the host architecture.
 case "$(uname -m)" in
   x86_64) HOST_PLATFORM="linux/amd64" ;;
   arm64 | aarch64) HOST_PLATFORM="linux/arm64" ;;
   *) HOST_PLATFORM="linux/$(uname -m)" ;;
 esac
 
-# Destination platforms to build for. Defaults to the host platform so that
-# the image built in Stage 2 is the same image started and tested in Stage 3,
-# natively, on the machine that runs the seeding.
+# Defaults to the host platform, so Stage 3 starts and tests the Stage 2
+# image natively on the machine running the seeding.
 DESTINATION_PLATFORMS="${DESTINATION_PLATFORMS:-${HOST_PLATFORM}}"
 
-# Log directory on host to store container logs.
 LOG_DIR="${LOG_DIR:-.logs}"
 
-# Temporary database structure directory on host.
 TMP_STRUCTURE_DIR="${TMP_STRUCTURE_DIR:-.db-structure}"
 
-# Show verbose output.
 LOG_IS_VERBOSE="${LOG_IS_VERBOSE:-}"
 
 # ------------------------------------------------------------------------------
@@ -181,7 +174,6 @@ start_container() {
 
 stop_container() {
   task "Stop and remove container ${1}"
-  # Log container output before stopping it into a separate log file for debugging.
   log_container "${1}" "stopped-"
   docker stop "${1}" >/dev/null
   docker rm -v "${1}" >/dev/null

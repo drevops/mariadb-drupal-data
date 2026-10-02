@@ -69,10 +69,10 @@ setup() {
 
 teardown() {
   # Stop and remove all test containers.
-  docker ps --all --format "{{.ID}}\t{{.Image}}" | grep testorg | awk '{print $1}' | xargs docker rm -f -v
+  docker ps --all --format "{{.ID}}\t{{.Image}}" | grep "${TEST_DOCKER_TAG_PREFIX}" | awk '{print $1}' | xargs docker rm -f -v || true
 
   # Remove all test images.
-  docker images -a | grep "testorg" | awk '{print $3}' | xargs docker rmi -f || true
+  docker images --format "{{.Repository}}:{{.Tag}}" | grep "${TEST_DOCKER_TAG_PREFIX}" | xargs docker rmi -f || true
 
   # Restore the original directory.
   popd >/dev/null || cd "${CUR_DIR}" || exit 1

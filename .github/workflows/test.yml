@@ -43,7 +43,7 @@ jobs:
       - name: Configure Git safe directory
         run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
 
-      - name: Check out the repo
+      - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Lint shell scripts

@@ -53,7 +53,7 @@ jobs:
           shellcheck seed.sh tests/bats/*.bash tests/bats/*.bats
         continue-on-error: ${{ vars.CI_LINT_IGNORE_FAILURE == '1' }}
 
-      - name: Install goss
+      - name: Install Goss
         run: |
           GOSS_VERSION=v0.4.9
           mkdir -p "${HOME}/bin"

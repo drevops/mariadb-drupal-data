@@ -25,7 +25,7 @@ load _helper
 
   step "Prepare base image."
 
-  substep "Copying fixture DB dump."
+  substep "Copy fixture DB dump."
   file="${BUILD_DIR}/db.sql"
   cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${file}"
 
@@ -85,7 +85,7 @@ load _helper
 
   step "Prepare base image."
 
-  substep "Copying fixture DB dump."
+  substep "Copy fixture DB dump."
   file="${BUILD_DIR}/db.sql"
   cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${file}"
 

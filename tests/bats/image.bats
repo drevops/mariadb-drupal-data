@@ -27,7 +27,7 @@ load _helper
   substep "Build base image ${base_image} and load into 'docker images'."
   docker buildx build --platform "${BUILDX_PLATFORMS}" --load -t "${base_image}" .
 
-  substep "Starting new detached container from the built base image."
+  substep "Start new detached container from the built base image."
   run docker run --user 1000 -d "${base_image}" 2>/dev/null
   assert_success
   cid="${output}"

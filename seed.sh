@@ -73,6 +73,20 @@ note() { printf "       %s\n" "${1}"; }
 [ "${BASE_IMAGE##*/}" = "${BASE_IMAGE}" ] && fail "${BASE_IMAGE} should be in a format myorg/myimage." && exit 1
 [ "${DST_IMAGE##*/}" = "${DST_IMAGE}" ] && fail "${DST_IMAGE} should be in a format myorg/myimage." && exit 1
 
+restore_dockerignore() {
+  [ ! -f ".dockerignore.bak" ] && return
+
+  note "Restoring .dockerignore from .dockerignore.bak"
+  mv .dockerignore.bak .dockerignore
+
+  if [ ! -f ".dockerignore" ]; then
+    fail "Unable to restore .dockerignore from .dockerignore.bak"
+    exit 1
+  fi
+
+  pass "Restored .dockerignore from .dockerignore.bak"
+}
+
 # Collect logs and display them on script exit.
 cleanup() {
   if [ $? -ne 0 ]; then
@@ -89,15 +103,7 @@ cleanup() {
       note "No logs available to display."
     fi
 
-    if [ -f ".dockerignore.bak" ]; then
-      note "Restoring .dockerignore from .dockerignore.bak"
-      mv .dockerignore.bak .dockerignore
-      if [ ! -f ".dockerignore" ]; then
-        fail "Unable to restore .dockerignore from .dockerignore.bak"
-        exit 1
-      fi
-      pass "Restored .dockerignore from .dockerignore.bak"
-    fi
+    restore_dockerignore
   fi
 }
 
@@ -266,15 +272,7 @@ cid="$(get_started_container_id "${DST_IMAGE}")"
 assert_db_was_imported "${cid}" 1000
 stop_container "${cid}"
 
-if [ -f ".dockerignore.bak" ]; then
-  note "Restoring .dockerignore from .dockerignore.bak"
-  mv .dockerignore.bak .dockerignore
-  if [ ! -f ".dockerignore" ]; then
-    fail "Unable to restore .dockerignore from .dockerignore.bak"
-    exit 1
-  fi
-  pass "Restored .dockerignore from .dockerignore.bak"
-fi
+restore_dockerignore
 
 info "Finished database seeding."
 note "https://hub.docker.com/r/${DST_IMAGE%:*}/tags"

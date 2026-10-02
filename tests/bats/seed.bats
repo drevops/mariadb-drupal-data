@@ -25,7 +25,7 @@ load _helper
 
   step "Prepare base image."
 
-  substep "Copy fixture DB dump."
+  substep "Copy fixture database dump."
   file="${BUILD_DIR}/db.sql"
   cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${file}"
 
@@ -40,7 +40,7 @@ load _helper
   # script to separate building images when preparing the test environment
   # from the seeding process.
   export DESTINATION_PLATFORMS="${BUILDX_PLATFORMS}"
-  substep "Run DB seeding script for ${dst_image} from the base image ${BASE_IMAGE} for destination platform(s) ${DESTINATION_PLATFORMS}."
+  substep "Run database seeding script for ${dst_image} from the base image ${BASE_IMAGE} for destination platform(s) ${DESTINATION_PLATFORMS}."
   ./seed.sh "${file}" "${dst_image}" >&3
 
   substep "Start container from the seeded image ${dst_image}."
@@ -85,7 +85,7 @@ load _helper
 
   step "Prepare base image."
 
-  substep "Copy fixture DB dump."
+  substep "Copy fixture database dump."
   file="${BUILD_DIR}/db.sql"
   cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${file}"
 
@@ -100,7 +100,7 @@ load _helper
   # script to separate building images when preparing the test environment
   # from the seeding process.
   export DESTINATION_PLATFORMS="${BUILDX_PLATFORMS}"
-  substep "Run DB seeding script for ${dst_image} from the base image ${BASE_IMAGE} for destination platform(s) ${DESTINATION_PLATFORMS}."
+  substep "Run database seeding script for ${dst_image} from the base image ${BASE_IMAGE} for destination platform(s) ${DESTINATION_PLATFORMS}."
   ./seed.sh "${file}" "${dst_image}" >&3
   assert_file_not_exists .dockerignore.bak
 

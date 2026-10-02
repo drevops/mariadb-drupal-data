@@ -78,8 +78,8 @@ tests/bats/node_modules/.bin/bats tests/bats/seed.bats --tap
 Run Goss tests (structural tests):
 
 ```bash
-docker build -t testorg/testimage:test-tag .
-GOSS_FILES_PATH=tests/dgoss dgoss run -i testorg/testimage:test-tag
+docker build -t gosstestorg/gosstestimage:goss-test-tag .
+GOSS_FILES_PATH=tests/dgoss dgoss run -i gosstestorg/gosstestimage:goss-test-tag
 ```
 
 ### Linting

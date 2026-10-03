@@ -10,6 +10,8 @@
 #
 # The tests copy the source code at the last commit into the test directory,
 # so uncommitted changes are not tested.
+#
+# shellcheck disable=SC2030,SC2031
 
 load _helper
 
@@ -145,12 +147,12 @@ start_with_upgrade_flags() {
   docker rm -f -v "${cid}" >/dev/null
 
   local upgrade=0
-  if [[ "${logs}" == *"starting mysql upgrade"* ]]; then
+  if [[ ${logs} == *"starting mysql upgrade"* ]]; then
     upgrade=1
   fi
 
   local notice=0
-  if [[ "${logs}" == *"FORCE_MYSQL_UPGRADE is deprecated; use MARIADB_FORCE_UPGRADE instead."* ]]; then
+  if [[ ${logs} == *"FORCE_MYSQL_UPGRADE is deprecated; use MARIADB_FORCE_UPGRADE instead."* ]]; then
     notice=1
   fi
 

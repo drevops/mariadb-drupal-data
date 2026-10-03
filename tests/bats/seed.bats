@@ -386,3 +386,96 @@ seed_failing_at() {
 
   echo "failure=${failure} export=${export_state} mode=${mode} container=${container}"
 }
+
+@test "Host platform is detected from the machine architecture" {
+  # Every Docker call fails, so seeding stops after printing its settings.
+  mock_docker="$(mock_command "docker")"
+  mock_set_status "${mock_docker}" 1
+  mock_uname="$(mock_command "uname")"
+
+  cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${BUILD_DIR}/db.sql"
+
+  # Columns: the 'uname -m' output and the expected output.
+  # shellcheck disable=SC2034
+  TEST_CASES=(
+    "x86_64" "Host platform: linux/amd64"
+    "arm64" "Host platform: linux/arm64"
+    "aarch64" "Host platform: linux/arm64"
+    "riscv64" "Host platform: linux/riscv64"
+  )
+  dataprovider_run "seed_on_machine" 2
+}
+
+seed_on_machine() {
+  mock_set_output "${mock_uname}" "${1}"
+  ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage"
+}
+
+@test "Seeding stops when the database checks in a container fail" {
+  mock_docker="$(mock_command "docker")"
+
+  cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${BUILD_DIR}/db.sql"
+
+  # Columns: the output of every Docker call and the expected output. The
+  # system tables check looks for 'user_variables', and the import check
+  # looks for 'users'.
+  # shellcheck disable=SC2034
+  TEST_CASES=(
+    "no-tables" "Database system tables are not present in container no-tables"
+    "user_variables" "Imported database does not exist in container user_variables"
+  )
+  dataprovider_run "seed_with_docker_output" 2
+}
+
+seed_with_docker_output() {
+  mock_set_output "${mock_docker}" "${1}"
+  ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage"
+}
+
+@test "Seeding stops when .dockerignore cannot be moved or restored" {
+  # Every Docker call fails, so seeding stops at the base image pull.
+  mock_docker="$(mock_command "docker")"
+  mock_set_status "${mock_docker}" 1
+
+  cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${BUILD_DIR}/db.sql"
+  echo ".db-structure" >.dockerignore
+
+  step "Assert that seeding stops when .dockerignore is not moved."
+  # The 'mv' mock succeeds without moving anything.
+  mock_command "mv" >/dev/null
+  run ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage"
+  assert_failure
+  assert_output_contains "Unable to move .dockerignore to .dockerignore.bak"
+  assert_file_exists .dockerignore
+
+  step "Assert that seeding reports a .dockerignore that is not restored."
+  # The 'mv' mock moves .dockerignore away, then succeeds without restoring it.
+  mock_mv="$(mock_command "mv")"
+  mock_set_side_effect "${mock_mv}" - 1 <<'EOF'
+command -p mv "$@"
+EOF
+  run ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage"
+  assert_failure
+  assert_output_contains "Unable to restore .dockerignore from .dockerignore.bak"
+  assert_file_exists .dockerignore.bak
+}
+
+@test "Container logs are streamed when LOG_IS_VERBOSE is set" {
+  mock_docker="$(mock_command "docker")"
+  # The output passes the system tables and import checks.
+  mock_set_output "${mock_docker}" "user_variables users"
+  mock_set_side_effect "${mock_docker}" - <<'EOF'
+if [ "${1}" = "logs" ]; then echo "Fake container log line."; fi
+EOF
+
+  cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${BUILD_DIR}/db.sql"
+
+  # The 'docker cp' mock copies nothing, so seeding stops in Stage 1 after the
+  # container logs were collected.
+  run env LOG_IS_VERBOSE=1 ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage"
+  assert_failure
+  assert_output_contains "Unable to copy expanded database files to host"
+  assert_output_contains "Fake container log line."
+  assert_output_contains "No logs available to display."
+  assert_file_contains ".logs/user_variables users.log" "Fake container log line."
+}

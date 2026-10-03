@@ -87,7 +87,8 @@ restore_dockerignore() {
 cleanup() {
   if [ $? -ne 0 ]; then
     fail "Collecting logs after failure."
-    if [ -d "${LOG_DIR}" ] && [ -z "${LOG_IS_VERBOSE}" ]; then
+    # An unmatched glob stays literal, so check for a log file before looping.
+    if [ -z "${LOG_IS_VERBOSE}" ] && compgen -G "${LOG_DIR}/*.log" >/dev/null; then
       for log_file in "${LOG_DIR}"/*.log; do
         echo
         note "--- Displaying ${log_file} ---"

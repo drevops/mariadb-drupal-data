@@ -136,6 +136,22 @@ load _helper
   assert_output_contains "users"
 }
 
+@test "Seeding restores .dockerignore when it fails before a container starts" {
+  # Every Docker call fails, so seeding stops at the base image pull.
+  mock_docker="$(mock_command "docker")"
+  mock_set_status "${mock_docker}" 1
+
+  cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${BUILD_DIR}/db.sql"
+  echo ".db-structure" >.dockerignore
+
+  run ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage"
+  assert_failure
+  assert_output_contains "No logs available to display."
+  assert_output_contains "Restored .dockerignore from .dockerignore.bak"
+  assert_file_exists .dockerignore
+  assert_file_not_exists .dockerignore.bak
+}
+
 @test "Destination image is resolved from the environment and the argument" {
   # Every Docker call fails, so seeding stops after printing its settings.
   mock_docker="$(mock_command "docker")"

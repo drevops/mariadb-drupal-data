@@ -47,6 +47,7 @@ Shell script tests use BATS:
    - **Stage 1**: Import SQL dump into temporary container and extract database files
    - **Stage 2**: Build new image with extracted database files using `docker buildx`
    - **Stage 3**: Verify database exists in the new image
+   - Takes the destination image from `DESTINATION_IMAGE`, then the deprecated `DST_IMAGE` alias, then the second argument
    - Builds images for the host platform by default; multi-platform builds (linux/amd64, linux/arm64) are opt-in via `DESTINATION_PLATFORMS`
    - Uses `docker buildx` to push directly to registry during build
 

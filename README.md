@@ -65,6 +65,9 @@ chmod +x seed.sh
 ```shell
 ./seed.sh path/to/db.sql myorg/myimage:latest
 
+# with the destination image from the environment
+DESTINATION_IMAGE=myorg/myimage:latest ./seed.sh path/to/db.sql
+
 # with forced source platform
 DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
 
@@ -76,6 +79,8 @@ BASE_IMAGE=drevops/mariadb-drupal-data:canary ./seed.sh path/to/db.sql myorg/myi
 ```
 
 By default, the script builds an image for the host platform (`linux/amd64` on Intel hosts, `linux/arm64` on Apple Silicon), so importing, building, and the final test stage all run natively on the machine that invokes it. Multi-platform builds are opt-in via `DESTINATION_PLATFORMS` and require a Docker buildx builder that supports them (Docker Desktop with the containerd image store, or a `docker-container` builder).
+
+You can also set the destination image in `DESTINATION_IMAGE`, which takes precedence over the second argument. `DST_IMAGE` is a deprecated alias for it: the script accepts it with lower precedence than `DESTINATION_IMAGE` and prints a deprecation notice when it's set.
 
 Note that you should already be logged in to the registry as `seed.sh` will be pushing an image as a part of `docker buildx` process.
 

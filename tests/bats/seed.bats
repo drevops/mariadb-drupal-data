@@ -172,6 +172,11 @@ load _helper
   assert_output_contains "Unable to sanitize database with queries from the ${BUILD_DIR}/broken.sql file."
   assert_output_not_contains "Stage 2: Build image"
 
+  substep "Assert that the container holding the unsanitized database was removed."
+  run docker ps --all --quiet --filter "ancestor=${BASE_IMAGE}"
+  assert_success
+  assert_output ""
+
   step "Assert seeding with sanitization works."
 
   run ./seed.sh "${file}" "${destination_image}"
@@ -197,6 +202,11 @@ load _helper
   run docker exec --user 1000 "${cid}" /usr/bin/mysql --skip-column-names -e "SELECT COUNT(*) FROM watchdog;" drupal
   assert_success
   assert_output "0"
+
+  substep "Assert that the export carried over the other database, whose name has a space."
+  run docker exec --user 1000 "${cid}" /usr/bin/mysql --skip-column-names -e "SELECT id FROM \`drupal extra\`.extra;" drupal
+  assert_success
+  assert_output "1"
 
   substep "Assert that no data file in the image holds the original value."
   # The default seeding test finds this value with the same search.
@@ -300,7 +310,7 @@ seed_with_sanitization() {
   SANITIZE_PROCEED="${1}" SANITIZE_FILE="${2}" TMP_SANITIZED_DB_FILE="${3}" ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage"
 }
 
-@test "Seeding removes the sanitized export when it fails after exporting it" {
+@test "Seeding removes the sanitized export and the running container when it fails" {
   mock_docker="$(mock_command "docker")"
   # The output passes the system tables and import checks.
   mock_set_output "${mock_docker}" "user_variables users"
@@ -322,4 +332,5 @@ EOF
   assert_output_contains "MySQL service did not start successfully."
   assert_file_not_exists .db-sanitized.sql
   assert_file_contains export-mode.txt "-rw-------"
+  assert_contains "rm -f -v" "$(mock_get_call_args "${mock_docker}")"
 }

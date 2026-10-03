@@ -100,10 +100,21 @@ restore_dockerignore() {
   pass "Restored .dockerignore from .dockerignore.bak"
 }
 
+# Removes the container that a failure left running, keeping its logs.
+remove_running_container() {
+  [ -z "${running_cid}" ] && return
+
+  log_container "${running_cid}" "stopped-" || true
+  docker rm -f -v "${running_cid}" >/dev/null || true
+  note "Removed container ${running_cid}"
+}
+
 # Collect logs and display them when the script exits with an error.
 cleanup() {
   if [ $? -ne 0 ]; then
     fail "Collecting logs after failure."
+    remove_running_container
+
     # An unmatched glob stays literal, so check for a log file before looping.
     if [ -z "${LOG_IS_VERBOSE}" ] && compgen -G "${LOG_DIR}/*.log" >/dev/null; then
       for log_file in "${LOG_DIR}"/*.log; do
@@ -124,6 +135,8 @@ cleanup() {
     fi
   fi
 }
+
+running_cid=""
 
 trap cleanup EXIT
 
@@ -195,6 +208,7 @@ start_container() {
   [ -n "${2-}" ] && user=("--user=${2}")
 
   cid="$(docker run "${user[@]}" -d "${1}" 2>"${LOG_DIR}/container-start.log")"
+  running_cid="${cid}"
   cat "${LOG_DIR}/container-start.log" >>"${LOG_DIR}/${cid}.log" && rm "${LOG_DIR}/container-start.log" || true
 
   wait_for_db_service "${cid}" "${2-}"
@@ -208,6 +222,7 @@ stop_container() {
   log_container "${1}" "stopped-"
   docker stop "${1}" >/dev/null
   docker rm -v "${1}" >/dev/null
+  running_cid=""
   pass "Stopped and removed container ${1}"
 }
 
@@ -275,12 +290,17 @@ if [ "${SANITIZE_PROCEED}" = "1" ]; then
   pass "Sanitized database with queries from the ${SANITIZE_FILE} file."
 
   task "Export sanitized database to the ${TMP_SANITIZED_DB_FILE} file."
-  databases="$(docker exec "${cid}" /usr/bin/mysql --skip-column-names --batch -e "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys');")"
+  database_names="$(docker exec "${cid}" /usr/bin/mysql --skip-column-names --batch --raw -e "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys');")"
+
+  databases=()
+  while IFS= read -r database; do
+    databases+=("${database}")
+  done <<<"${database_names}"
+
   # The export holds database contents, so it is recreated with owner-only
   # permissions.
   rm -f "${TMP_SANITIZED_DB_FILE}"
-  # shellcheck disable=SC2086
-  if ! (umask 077 && docker exec "${cid}" /usr/bin/mysqldump --routines --events --hex-blob --databases ${databases} >"${TMP_SANITIZED_DB_FILE}"); then
+  if ! (umask 077 && docker exec "${cid}" /usr/bin/mysqldump --routines --events --hex-blob --databases "${databases[@]}" >"${TMP_SANITIZED_DB_FILE}"); then
     fail "Unable to export sanitized database to the ${TMP_SANITIZED_DB_FILE} file."
     exit 1
   fi

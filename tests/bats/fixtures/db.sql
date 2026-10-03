@@ -94,6 +94,23 @@ VALUES
 UNLOCK TABLES;
 
 
+# Dump of database drupal extra
+# ------------------------------------------------------------
+
+CREATE DATABASE IF NOT EXISTS `drupal extra` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+
+USE `drupal extra`;
+
+DROP TABLE IF EXISTS `extra`;
+
+CREATE TABLE `extra` (
+  `id` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+INSERT INTO `extra` (`id`) VALUES (1);
+
+
 
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

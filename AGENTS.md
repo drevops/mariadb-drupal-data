@@ -21,7 +21,7 @@ This project provides a MariaDB Docker image for Drupal that captures database d
    - Supports `MARIADB_DATA_DIR` environment variable
    - Handles database initialization in custom location
    - Supports `MARIADB_COPY_DATA_DIR_SOURCE` for pre-filling data
-   - Includes `FORCE_MYSQL_UPGRADE` flag for forcing upgrades
+   - Includes `MARIADB_FORCE_UPGRADE` flag for forcing upgrades, with `FORCE_MYSQL_UPGRADE` as a deprecated alias
 
 3. **seed.sh** - 3-stage database seeding script:
    - **Stage 1**: Import SQL dump into temporary container and extract database files
@@ -149,6 +149,7 @@ DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node_modules/.bin/bats tests/bats
 - When updating base image version, follow upstream versioning
 - seed.sh requires being logged into Docker registry (it pushes during buildx)
 - Tests run for the host platform unless explicitly configured otherwise
+- Renovate's `github-actions` manager doesn't read workflow matrix values, so a custom regex manager in `renovate.json` tracks the `drevops/ci-runner` image in the `test.yml` matrix; it only matches the `container: <image>:<tag>@<digest>` form, so keep that form when editing the matrix
 
 ## Updating from the template
 

@@ -80,8 +80,15 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
       sleep $MARIADB_INIT_PERIOD_SECONDS
     done
 
-    # @note: mariadb-upgrade runs only when FORCE_MYSQL_UPGRADE is 1.
-    if [ "${FORCE_MYSQL_UPGRADE:-}" = "1" ]; then
+    # @note: mariadb-upgrade runs only when MARIADB_FORCE_UPGRADE is 1.
+    # FORCE_MYSQL_UPGRADE is a deprecated alias of MARIADB_FORCE_UPGRADE.
+    MARIADB_FORCE_UPGRADE=${MARIADB_FORCE_UPGRADE:-${FORCE_MYSQL_UPGRADE:-}}
+
+    if [ -n "${FORCE_MYSQL_UPGRADE:-}" ]; then
+      echo "FORCE_MYSQL_UPGRADE is deprecated; use MARIADB_FORCE_UPGRADE instead."
+    fi
+
+    if [ "${MARIADB_FORCE_UPGRADE}" = "1" ]; then
       echo "starting mysql upgrade"
       # @note: mariadb-upgrade may fail on the first run due to the unresolved
       # permissions, but will succeed on the second run.

@@ -36,7 +36,7 @@ jobs:
             arch: amd64
             os: ubuntu-latest
             # https://hub.docker.com/r/drevops/ci-runner
-            container: drevops/ci-runner:26.6.0@sha256:190027056cac7b7ce28c29a1e5494779ebadc4ee8e95d468b75bc56e7be5aabd
+            container: drevops/ci-runner:26.10.0@sha256:36db4ee12da3372c86966fccd543e49c9470bca12e86eb5d4aad7904dd84a0dd
 
     runs-on: ${{ matrix.os }}
 

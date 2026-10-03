@@ -28,6 +28,8 @@ This project provides a MariaDB Docker image for Drupal that captures database d
    - **Stage 2**: Build new image with extracted database files using `docker buildx`
    - **Stage 3**: Verify database exists in the new image
    - Takes the destination image from `DESTINATION_IMAGE`, then the deprecated `DST_IMAGE` alias, then the second argument
+   - Tags an untagged destination `latest`, looking for the tag only in the last path component so a registry port isn't read as one
+   - Ends by printing the Docker Hub tags page for a Docker Hub destination (with or without a `docker.io/` prefix), or the pushed reference for any other registry; a first path component with a `.`, a `:` or an uppercase letter, or `localhost`, is a registry host, as in Docker's reference parsing
    - When `SANITIZE_PROCEED` is `1` (default `0`; `true` leaves it off), runs the SQL queries from `SANITIZE_FILE` (default `./scripts/sanitize.sql`) in a separate container and imports that container's export into the captured one; a failing query, or a dump or query that changes accounts, grants or other tables in the `mysql` system database, stops seeding before Stage 2
    - Builds images for the host platform by default; multi-platform builds (linux/amd64, linux/arm64) are opt-in via `DESTINATION_PLATFORMS`
    - Uses `docker buildx` to push directly to registry during build

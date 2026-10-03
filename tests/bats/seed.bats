@@ -296,6 +296,57 @@ seed_with_destination() {
   DESTINATION_IMAGE="${1}" DST_IMAGE="${2}" ./seed.sh "${args[@]}"
 }
 
+@test "Destination image is tagged and reported for its registry" {
+  mock_docker="$(mock_command "docker")"
+  # The mock lets seeding finish. 'docker cp' creates the data directory that
+  # Stage 1 checks for, and other calls print what the database checks look
+  # for.
+  mock_set_side_effect "${mock_docker}" - <<'EOF'
+case "${1}" in
+  run) echo "fake-container" ;;
+  cp) mkdir -p .db-structure/mysql ;;
+  *) echo "user_variables users" ;;
+esac
+EOF
+
+  cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${BUILD_DIR}/db.sql"
+
+  # Columns: the destination image and the expected destination image and
+  # last line of the output.
+  # shellcheck disable=SC2034
+  TEST_CASES=(
+    "myorg/myimage" "destination=myorg/myimage:latest last=https://hub.docker.com/r/myorg/myimage/tags"
+    "myorg/myimage:1.0" "destination=myorg/myimage:1.0 last=https://hub.docker.com/r/myorg/myimage/tags"
+    "docker.io/myorg/myimage" "destination=docker.io/myorg/myimage:latest last=https://hub.docker.com/r/myorg/myimage/tags"
+    "docker.io/myorg/myimage:1.0" "destination=docker.io/myorg/myimage:1.0 last=https://hub.docker.com/r/myorg/myimage/tags"
+    "index.docker.io/myorg/myimage:1.0" "destination=index.docker.io/myorg/myimage:1.0 last=https://hub.docker.com/r/myorg/myimage/tags"
+    "ghcr.io/myorg/myimage" "destination=ghcr.io/myorg/myimage:latest last=ghcr.io/myorg/myimage:latest"
+    "ghcr.io/myorg/myimage:1.0" "destination=ghcr.io/myorg/myimage:1.0 last=ghcr.io/myorg/myimage:1.0"
+    "localhost:5055/myorg/myimage" "destination=localhost:5055/myorg/myimage:latest last=localhost:5055/myorg/myimage:latest"
+    "localhost:5055/myorg/myimage:canary" "destination=localhost:5055/myorg/myimage:canary last=localhost:5055/myorg/myimage:canary"
+    "localhost:5055/myimage" "destination=localhost:5055/myimage:latest last=localhost:5055/myimage:latest"
+    "localhost/myorg/myimage" "destination=localhost/myorg/myimage:latest last=localhost/myorg/myimage:latest"
+    "10.0.0.1:5000/myorg/myimage" "destination=10.0.0.1:5000/myorg/myimage:latest last=10.0.0.1:5000/myorg/myimage:latest"
+    "MyRegistry/myorg/myimage:1.0" "destination=MyRegistry/myorg/myimage:1.0 last=MyRegistry/myorg/myimage:1.0"
+  )
+  dataprovider_run "seed_to_destination" 2
+}
+
+# Runs seeding to the destination image in the argument, then prints the
+# destination image it reports and the last line of its output.
+seed_to_destination() {
+  local seed_output
+  seed_output="$(./seed.sh "${BUILD_DIR}/db.sql" "${1}" 2>&1)"
+
+  local destination
+  destination="$(echo "${seed_output}" | sed -n 's/^ *Destination image: //p')"
+
+  local last_line
+  last_line="$(echo "${seed_output}" | sed -n '$s/^ *//p')"
+
+  echo "destination=${destination} last=${last_line}"
+}
+
 @test "Sanitization is validated and announced before seeding starts" {
   # Every Docker call fails, so seeding stops after printing its settings.
   mock_docker="$(mock_command "docker")"

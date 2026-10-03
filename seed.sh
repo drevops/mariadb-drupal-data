@@ -15,6 +15,8 @@
 # Usage:
 # ./seed.sh path/to/db.sql myorg/myimage:latest
 #
+# ./seed.sh path/to/db.sql ghcr.io/myorg/myimage:latest
+#
 # DESTINATION_IMAGE=myorg/myimage:latest ./seed.sh path/to/db.sql
 #
 # SANITIZE_PROCEED=1 ./seed.sh path/to/db.sql myorg/myimage:latest
@@ -248,8 +250,10 @@ if [ -n "${DOCKER_DEFAULT_PLATFORM}" ]; then
   note "Source platform architecture: ${DOCKER_DEFAULT_PLATFORM}"
 fi
 
-# Normalize image - add ":latest" if tag was not provided.
-[ -n "${DESTINATION_IMAGE##*:*}" ] && DESTINATION_IMAGE="${DESTINATION_IMAGE}:latest"
+# Normalize image - add ":latest" if tag was not provided. A registry port
+# also follows a ':', so only the last path component is checked for a tag.
+destination_image_basename="${DESTINATION_IMAGE##*/}"
+[ -n "${destination_image_basename##*:*}" ] && DESTINATION_IMAGE="${DESTINATION_IMAGE}:latest"
 note "Host platform: ${HOST_PLATFORM}"
 note "Destination image: ${DESTINATION_IMAGE}"
 note "Destination platform(s): ${DESTINATION_PLATFORMS}"
@@ -374,4 +378,15 @@ stop_container "${cid}"
 restore_dockerignore
 
 info "Finished database seeding."
-note "https://hub.docker.com/r/${DESTINATION_IMAGE%:*}/tags"
+
+destination_repository="${DESTINATION_IMAGE%:*}"
+
+# The first path component is a registry host when it has a '.', a ':' or an
+# uppercase letter, or is 'localhost'. Registries other than Docker Hub have
+# no common tags page URL, so the reference is printed for them.
+# @see https://github.com/distribution/reference/blob/main/normalize.go
+case "${destination_repository%%/*}" in
+  docker.io | index.docker.io) note "https://hub.docker.com/r/${destination_repository#*/}/tags" ;;
+  localhost | *.* | *:* | *[[:upper:]]*) note "${DESTINATION_IMAGE}" ;;
+  *) note "https://hub.docker.com/r/${destination_repository}/tags" ;;
+esac

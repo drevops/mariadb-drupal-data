@@ -76,6 +76,8 @@ note() { printf "       %s\n" "${1}"; }
 [ -z "${DESTINATION_IMAGE}" ] && fail "Destination Docker image name must be provided as the second argument." && exit 1
 [ ! -f "${DB_FILE}" ] && fail "Specified database dump file ${DB_FILE} does not exist." && exit 1
 [ -n "${SANITIZE_FILE}" ] && [ ! -f "${SANITIZE_FILE}" ] && fail "Specified sanitization file ${SANITIZE_FILE} does not exist." && exit 1
+[ -n "${SANITIZE_FILE}" ] && [ "${DB_FILE}" -ef "${TMP_SANITIZED_DB_FILE}" ] && fail "Specified database dump file ${DB_FILE} would be overwritten by the sanitized export; rename it or set TMP_SANITIZED_DB_FILE." && exit 1
+[ "${SANITIZE_FILE}" -ef "${TMP_SANITIZED_DB_FILE}" ] && fail "Specified sanitization file ${SANITIZE_FILE} would be overwritten by the sanitized export; rename it or set TMP_SANITIZED_DB_FILE." && exit 1
 [ "${BASE_IMAGE##*/}" = "${BASE_IMAGE}" ] && fail "${BASE_IMAGE} should be in a format myorg/myimage." && exit 1
 [ "${DESTINATION_IMAGE##*/}" = "${DESTINATION_IMAGE}" ] && fail "${DESTINATION_IMAGE} should be in a format myorg/myimage." && exit 1
 
@@ -111,6 +113,10 @@ cleanup() {
     fi
 
     restore_dockerignore
+
+    if [ -n "${SANITIZE_FILE}" ]; then
+      rm -f "${TMP_SANITIZED_DB_FILE}"
+    fi
   fi
 }
 
@@ -265,8 +271,11 @@ if [ -n "${SANITIZE_FILE}" ]; then
 
   task "Export sanitized database to the ${TMP_SANITIZED_DB_FILE} file."
   databases="$(docker exec "${cid}" /usr/bin/mysql --skip-column-names --batch -e "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys');")"
+  # The export holds database contents, so it is recreated with owner-only
+  # permissions.
+  rm -f "${TMP_SANITIZED_DB_FILE}"
   # shellcheck disable=SC2086
-  if ! docker exec "${cid}" /usr/bin/mysqldump --routines --events --hex-blob --databases ${databases} >"${TMP_SANITIZED_DB_FILE}"; then
+  if ! (umask 077 && docker exec "${cid}" /usr/bin/mysqldump --routines --events --hex-blob --databases ${databases} >"${TMP_SANITIZED_DB_FILE}"); then
     fail "Unable to export sanitized database to the ${TMP_SANITIZED_DB_FILE} file."
     exit 1
   fi

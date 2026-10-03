@@ -5,9 +5,9 @@
 #
 # The seeding process has 3 stages:
 # 1. Create extracted DB files by starting a temporary container and
-#    importing the database. With SANITIZE_FILE set, the database is first
-#    imported and sanitized in another container, and its export is imported
-#    instead.
+#    importing the database. With SANITIZE_PROCEED set to 1, the database is
+#    first imported and sanitized in another container, and its export is
+#    imported instead.
 # 2. Build a new image from the base image and extracted DB files.
 # 3. Start a container from the new image and verify that the database was
 #    imported.
@@ -17,7 +17,9 @@
 #
 # DESTINATION_IMAGE=myorg/myimage:latest ./seed.sh path/to/db.sql
 #
-# SANITIZE_FILE=path/to/sanitize.sql ./seed.sh path/to/db.sql myorg/myimage:latest
+# SANITIZE_PROCEED=1 ./seed.sh path/to/db.sql myorg/myimage:latest
+#
+# SANITIZE_PROCEED=1 SANITIZE_FILE=path/to/sanitize.sql ./seed.sh path/to/db.sql myorg/myimage:latest
 #
 # DESTINATION_PLATFORMS=linux/amd64,linux/arm64 ./seed.sh path/to/db.sql myorg/myimage:latest
 #
@@ -33,8 +35,11 @@ DB_FILE="${DB_FILE:-${1-}}"
 # DST_IMAGE is a deprecated alias of DESTINATION_IMAGE.
 DESTINATION_IMAGE="${DESTINATION_IMAGE:-${DST_IMAGE:-${2-}}}"
 
-# File with SQL queries to run against the imported database before capture.
-SANITIZE_FILE="${SANITIZE_FILE:-}"
+# Sanitization runs only when this is 1, not for 'true' or any other value.
+SANITIZE_PROCEED="${SANITIZE_PROCEED:-0}"
+
+# File with SQL queries that sanitize the imported database before capture.
+SANITIZE_FILE="${SANITIZE_FILE:-./scripts/sanitize.sql}"
 
 # Exporting the databases needs a known data directory path, so Stage 1 uses
 # this same base image.
@@ -75,9 +80,9 @@ note() { printf "       %s\n" "${1}"; }
 [ -z "${DB_FILE}" ] && fail "Path to the database dump file must be provided as the first argument." && exit 1
 [ -z "${DESTINATION_IMAGE}" ] && fail "Destination Docker image name must be provided as the second argument." && exit 1
 [ ! -f "${DB_FILE}" ] && fail "Specified database dump file ${DB_FILE} does not exist." && exit 1
-[ -n "${SANITIZE_FILE}" ] && [ ! -f "${SANITIZE_FILE}" ] && fail "Specified sanitization file ${SANITIZE_FILE} does not exist." && exit 1
-[ -n "${SANITIZE_FILE}" ] && [ "${DB_FILE}" -ef "${TMP_SANITIZED_DB_FILE}" ] && fail "Specified database dump file ${DB_FILE} would be overwritten by the sanitized export; rename it or set TMP_SANITIZED_DB_FILE." && exit 1
-[ "${SANITIZE_FILE}" -ef "${TMP_SANITIZED_DB_FILE}" ] && fail "Specified sanitization file ${SANITIZE_FILE} would be overwritten by the sanitized export; rename it or set TMP_SANITIZED_DB_FILE." && exit 1
+[ "${SANITIZE_PROCEED}" = "1" ] && [ ! -f "${SANITIZE_FILE}" ] && fail "Specified sanitization file ${SANITIZE_FILE} does not exist." && exit 1
+[ "${SANITIZE_PROCEED}" = "1" ] && [ "${DB_FILE}" -ef "${TMP_SANITIZED_DB_FILE}" ] && fail "Specified database dump file ${DB_FILE} would be overwritten by the sanitized export; rename it or set TMP_SANITIZED_DB_FILE." && exit 1
+[ "${SANITIZE_PROCEED}" = "1" ] && [ "${SANITIZE_FILE}" -ef "${TMP_SANITIZED_DB_FILE}" ] && fail "Specified sanitization file ${SANITIZE_FILE} would be overwritten by the sanitized export; rename it or set TMP_SANITIZED_DB_FILE." && exit 1
 [ "${BASE_IMAGE##*/}" = "${BASE_IMAGE}" ] && fail "${BASE_IMAGE} should be in a format myorg/myimage." && exit 1
 [ "${DESTINATION_IMAGE##*/}" = "${DESTINATION_IMAGE}" ] && fail "${DESTINATION_IMAGE} should be in a format myorg/myimage." && exit 1
 
@@ -114,7 +119,7 @@ cleanup() {
 
     restore_dockerignore
 
-    if [ -n "${SANITIZE_FILE}" ]; then
+    if [ "${SANITIZE_PROCEED}" = "1" ]; then
       rm -f "${TMP_SANITIZED_DB_FILE}"
     fi
   fi
@@ -226,10 +231,10 @@ note "Host platform: ${HOST_PLATFORM}"
 note "Destination image: ${DESTINATION_IMAGE}"
 note "Destination platform(s): ${DESTINATION_PLATFORMS}"
 
-if [ -n "${SANITIZE_FILE}" ]; then
+if [ "${SANITIZE_PROCEED}" = "1" ]; then
   note "Sanitization: enabled; the queries from ${SANITIZE_FILE} run before the database is captured."
 else
-  note "Sanitization: disabled; the database is captured as imported."
+  note "Sanitization: disabled; set SANITIZE_PROCEED=1 to sanitize the database before it is captured."
 fi
 
 if [ -n "${DST_IMAGE:-}" ]; then
@@ -256,7 +261,7 @@ import_file="${DB_FILE}"
 
 # Sanitizing in place leaves the replaced values in the captured InnoDB redo
 # log, so the queries run in another container whose export is imported.
-if [ -n "${SANITIZE_FILE}" ]; then
+if [ "${SANITIZE_PROCEED}" = "1" ]; then
   start_container "${BASE_IMAGE}"
   import_db "${cid}" "${DB_FILE}"
 
@@ -288,7 +293,7 @@ fi
 start_container "${BASE_IMAGE}"
 import_db "${cid}" "${import_file}"
 
-if [ -n "${SANITIZE_FILE}" ]; then
+if [ "${SANITIZE_PROCEED}" = "1" ]; then
   rm -f "${TMP_SANITIZED_DB_FILE}"
 fi
 

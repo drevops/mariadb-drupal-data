@@ -28,7 +28,7 @@ This project provides a MariaDB Docker image for Drupal that captures database d
    - **Stage 2**: Build new image with extracted database files using `docker buildx`
    - **Stage 3**: Verify database exists in the new image
    - Takes the destination image from `DESTINATION_IMAGE`, then the deprecated `DST_IMAGE` alias, then the second argument
-   - Runs the SQL queries from the opt-in `SANITIZE_FILE` in a separate container and imports that container's export into the captured one; a failing query stops seeding before Stage 2
+   - When `SANITIZE_PROCEED` is `1` (default `0`; `true` leaves it off), runs the SQL queries from `SANITIZE_FILE` (default `./scripts/sanitize.sql`) in a separate container and imports that container's export into the captured one; a failing query stops seeding before Stage 2
    - Builds images for the host platform by default; multi-platform builds (linux/amd64, linux/arm64) are opt-in via `DESTINATION_PLATFORMS`
    - Uses `docker buildx` to push directly to registry during build
 
@@ -103,7 +103,7 @@ DESTINATION_PLATFORMS=linux/amd64,linux/arm64 ./seed.sh path/to/db.sql myorg/myi
 Seed image with a sanitized database:
 
 ```bash
-SANITIZE_FILE=path/to/sanitize.sql ./seed.sh path/to/db.sql myorg/myimage:latest
+SANITIZE_PROCEED=1 SANITIZE_FILE=path/to/sanitize.sql ./seed.sh path/to/db.sql myorg/myimage:latest
 ```
 
 Use custom base image:

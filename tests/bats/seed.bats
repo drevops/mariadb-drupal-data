@@ -145,40 +145,39 @@ load _helper
   assert_output_contains "users"
 }
 
-@test "Seeding sanitizes the data with the queries from SANITIZE_FILE" {
+@test "Seeding sanitizes the data when SANITIZE_PROCEED is 1" {
   tag="${TEST_DOCKER_TAG}"
   export BASE_IMAGE="drevops/mariadb-drupal-data-test:${tag}-base"
   destination_image="drevops/mariadb-drupal-data-test:${tag}-destination"
 
   step "Prepare base image."
 
-  substep "Copy fixture database dump and sanitization file."
+  substep "Copy fixture database dump and sanitization file to the default SANITIZE_FILE location."
   file="${BUILD_DIR}/db.sql"
   cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${file}"
-  sanitize_file="${BUILD_DIR}/sanitize.sql"
-  cp "${BATS_TEST_DIRNAME}/fixtures/sanitize.sql" "${sanitize_file}"
+  mkdir -p scripts
+  cp "${BATS_TEST_DIRNAME}/fixtures/sanitize.sql" scripts/sanitize.sql
 
   substep "Build and push a fresh base image tagged with ${BASE_IMAGE}."
   docker buildx build --platform "${BUILDX_PLATFORMS}" --load --push --no-cache -t "${BASE_IMAGE}" .
 
   export DESTINATION_PLATFORMS="${BUILDX_PLATFORMS}"
+  export SANITIZE_PROCEED=1
 
   step "Assert seeding stops before building the image when a sanitization query fails."
 
   echo "UPDATE missing_table SET mail = NULL;" >"${BUILD_DIR}/broken.sql"
-  export SANITIZE_FILE="${BUILD_DIR}/broken.sql"
-  run ./seed.sh "${file}" "${destination_image}"
+  run env SANITIZE_FILE="${BUILD_DIR}/broken.sql" ./seed.sh "${file}" "${destination_image}"
   assert_failure
-  assert_output_contains "Unable to sanitize database with queries from the ${SANITIZE_FILE} file."
+  assert_output_contains "Unable to sanitize database with queries from the ${BUILD_DIR}/broken.sql file."
   assert_output_not_contains "Stage 2: Build image"
 
   step "Assert seeding with sanitization works."
 
-  export SANITIZE_FILE="${sanitize_file}"
   run ./seed.sh "${file}" "${destination_image}"
   assert_success
-  assert_output_contains "Sanitization: enabled; the queries from ${SANITIZE_FILE} run before the database is captured."
-  assert_output_contains "Sanitized database with queries from the ${SANITIZE_FILE} file."
+  assert_output_contains "Sanitization: enabled; the queries from ./scripts/sanitize.sql run before the database is captured."
+  assert_output_contains "Sanitized database with queries from the ./scripts/sanitize.sql file."
   assert_file_not_exists .db-sanitized.sql
 
   substep "Start container from the seeded image ${destination_image}."
@@ -260,7 +259,7 @@ seed_with_destination() {
   DESTINATION_IMAGE="${1}" DST_IMAGE="${2}" ./seed.sh "${args[@]}"
 }
 
-@test "Sanitization file is validated and announced before seeding starts" {
+@test "Sanitization is validated and announced before seeding starts" {
   # Every Docker call fails, so seeding stops after printing its settings.
   mock_docker="$(mock_command "docker")"
   mock_set_status "${mock_docker}" 1
@@ -269,32 +268,36 @@ seed_with_destination() {
   cp "${BATS_TEST_DIRNAME}/fixtures/sanitize.sql" "${BUILD_DIR}/sanitize.sql"
 
   substep "Assert that a missing sanitization file stops seeding before any Docker call."
-  run seed_with_sanitize_file "${BUILD_DIR}/missing.sql" ""
+  run seed_with_sanitization "1" "${BUILD_DIR}/missing.sql" ""
   assert_failure
   assert_output_contains "Specified sanitization file ${BUILD_DIR}/missing.sql does not exist."
   assert_equal "0" "$(mock_get_call_num "${mock_docker}")"
 
-  # Columns: the SANITIZE_FILE value, the TMP_SANITIZED_DB_FILE value and the
-  # expected output.
+  # Columns: the SANITIZE_PROCEED, SANITIZE_FILE and TMP_SANITIZED_DB_FILE
+  # values and the expected output. An empty value leaves the default.
   # shellcheck disable=SC2034
   TEST_CASES=(
-    "" "" "Sanitization: disabled; the database is captured as imported."
-    "${BUILD_DIR}/sanitize.sql" "" "Sanitization: enabled; the queries from ${BUILD_DIR}/sanitize.sql run before the database is captured."
-    "${BUILD_DIR}/missing.sql" "" "Specified sanitization file ${BUILD_DIR}/missing.sql does not exist."
-    "${BUILD_DIR}" "" "Specified sanitization file ${BUILD_DIR} does not exist."
-    "${BUILD_DIR}/sanitize.sql" "db.sql" "Specified database dump file ${BUILD_DIR}/db.sql would be overwritten by the sanitized export; rename it or set TMP_SANITIZED_DB_FILE."
-    "sanitize.sql" "${BUILD_DIR}/sanitize.sql" "Specified sanitization file sanitize.sql would be overwritten by the sanitized export; rename it or set TMP_SANITIZED_DB_FILE."
-    "" "db.sql" "Sanitization: disabled; the database is captured as imported."
+    "" "" "" "Sanitization: disabled; set SANITIZE_PROCEED=1 to sanitize the database before it is captured."
+    "0" "${BUILD_DIR}/sanitize.sql" "" "Sanitization: disabled; set SANITIZE_PROCEED=1 to sanitize the database before it is captured."
+    "true" "${BUILD_DIR}/sanitize.sql" "" "Sanitization: disabled; set SANITIZE_PROCEED=1 to sanitize the database before it is captured."
+    "1" "${BUILD_DIR}/sanitize.sql" "" "Sanitization: enabled; the queries from ${BUILD_DIR}/sanitize.sql run before the database is captured."
+    "1" "" "" "Specified sanitization file ./scripts/sanitize.sql does not exist."
+    "1" "${BUILD_DIR}/missing.sql" "" "Specified sanitization file ${BUILD_DIR}/missing.sql does not exist."
+    "1" "${BUILD_DIR}" "" "Specified sanitization file ${BUILD_DIR} does not exist."
+    "0" "${BUILD_DIR}/missing.sql" "" "Sanitization: disabled; set SANITIZE_PROCEED=1 to sanitize the database before it is captured."
+    "1" "${BUILD_DIR}/sanitize.sql" "db.sql" "Specified database dump file ${BUILD_DIR}/db.sql would be overwritten by the sanitized export; rename it or set TMP_SANITIZED_DB_FILE."
+    "1" "sanitize.sql" "${BUILD_DIR}/sanitize.sql" "Specified sanitization file sanitize.sql would be overwritten by the sanitized export; rename it or set TMP_SANITIZED_DB_FILE."
+    "0" "sanitize.sql" "sanitize.sql" "Sanitization: disabled; set SANITIZE_PROCEED=1 to sanitize the database before it is captured."
   )
-  dataprovider_run "seed_with_sanitize_file" 3
+  dataprovider_run "seed_with_sanitization" 4
 
   substep "Assert that the input files were kept."
   assert_file_exists "${BUILD_DIR}/db.sql"
   assert_file_exists "${BUILD_DIR}/sanitize.sql"
 }
 
-seed_with_sanitize_file() {
-  SANITIZE_FILE="${1}" TMP_SANITIZED_DB_FILE="${2}" ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage"
+seed_with_sanitization() {
+  SANITIZE_PROCEED="${1}" SANITIZE_FILE="${2}" TMP_SANITIZED_DB_FILE="${3}" ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage"
 }
 
 @test "Seeding removes the sanitized export when it fails after exporting it" {
@@ -311,6 +314,7 @@ EOF
   cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${BUILD_DIR}/db.sql"
   cp "${BATS_TEST_DIRNAME}/fixtures/sanitize.sql" "${BUILD_DIR}/sanitize.sql"
 
+  export SANITIZE_PROCEED=1
   export SANITIZE_FILE="${BUILD_DIR}/sanitize.sql"
   run ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage"
   assert_failure

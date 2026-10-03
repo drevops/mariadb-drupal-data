@@ -14,7 +14,7 @@
 load _helper
 
 @test "Data is preserved in an image captured from the running container" {
-  tag="${TEST_DOCKER_TAG_PREFIX}$(random_string_lower)"
+  tag="${TEST_DOCKER_TAG}"
   # The base image is local; the buildx build below loads it into the Docker
   # engine from the buildx cache.
   base_image="testorg/testimagebase:${tag}"

@@ -16,7 +16,7 @@
 load _helper
 
 @test "Seeding of the data works" {
-  tag="${TEST_DOCKER_TAG_PREFIX}$(random_string_lower)"
+  tag="${TEST_DOCKER_TAG}"
   export BASE_IMAGE="drevops/mariadb-drupal-data-test:${tag}-base"
   dst_image="drevops/mariadb-drupal-data-test:${tag}-dst"
 
@@ -74,7 +74,7 @@ load _helper
 }
 
 @test "Seeding of the data works with .dockerignore" {
-  tag="${TEST_DOCKER_TAG_PREFIX}$(random_string_lower)"
+  tag="${TEST_DOCKER_TAG}"
   export BASE_IMAGE="drevops/mariadb-drupal-data-test:${tag}-base"
   dst_image="drevops/mariadb-drupal-data-test:${tag}-dst"
 

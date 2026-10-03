@@ -51,15 +51,19 @@ setup() {
   export DOCKER_BUILDKIT=1
 
   export TEST_DOCKER_TAG_PREFIX="bats-test-"
+  TEST_DOCKER_TAG="${TEST_DOCKER_TAG_PREFIX}$(random_string_lower)"
+  export TEST_DOCKER_TAG
 
   # A test that must operate outside BUILD_DIR changes directory explicitly.
   pushd "${BUILD_DIR}" >/dev/null || exit 1
 }
 
 teardown() {
-  docker ps --all --format "{{.ID}}\t{{.Image}}" | grep "${TEST_DOCKER_TAG_PREFIX}" | awk '{print $1}' | xargs docker rm -f -v || true
-
-  docker images --format "{{.Repository}}:{{.Tag}}" | grep "${TEST_DOCKER_TAG_PREFIX}" | xargs docker rmi -f || true
+  # An empty tag would make both filters match every container and image.
+  if [ -n "${TEST_DOCKER_TAG:-}" ]; then
+    docker ps --all --format "{{.ID}}\t{{.Image}}" | grep ":${TEST_DOCKER_TAG}" | awk '{print $1}' | xargs docker rm -f -v || true
+    docker images --format "{{.Repository}}:{{.Tag}}" | grep ":${TEST_DOCKER_TAG}" | xargs docker rmi -f || true
+  fi
 
   popd >/dev/null || cd "${CUR_DIR}" || exit 1
 }

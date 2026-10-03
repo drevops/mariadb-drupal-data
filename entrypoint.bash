@@ -63,6 +63,8 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
       echo "[client]" >> ${MARIADB_DATA_DIR:-/var/lib/mysql}/.my.cnf
       echo "user=root" >> ${MARIADB_DATA_DIR:-/var/lib/mysql}/.my.cnf
       echo "password=${MARIADB_ROOT_PASSWORD}"  >> ${MARIADB_DATA_DIR:-/var/lib/mysql}/.my.cnf
+      echo "[mysql]" >> ${MARIADB_DATA_DIR:-/var/lib/mysql}/.my.cnf
+      echo "database=${MARIADB_DATABASE}" >> ${MARIADB_DATA_DIR:-/var/lib/mysql}/.my.cnf
     fi
 
     echo "starting mysql"

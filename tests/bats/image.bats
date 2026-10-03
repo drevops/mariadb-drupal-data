@@ -107,14 +107,17 @@ load _helper
   step "Assert that the upgrade follows MARIADB_FORCE_UPGRADE and its deprecated alias."
 
   # Columns: MARIADB_FORCE_UPGRADE, FORCE_MYSQL_UPGRADE and the expected
-  # outcome. An empty value leaves that variable unset.
+  # outcome. 'unset' leaves that variable unset.
   # shellcheck disable=SC2034
   TEST_CASES=(
-    "" "" "upgrade=0 notice=0"
-    "1" "" "upgrade=1 notice=0"
-    "" "1" "upgrade=1 notice=1"
-    "0" "1" "upgrade=0 notice=1"
+    "unset" "unset" "upgrade=0 notice=0"
+    "1" "unset" "upgrade=1 notice=0"
+    "true" "unset" "upgrade=0 notice=0"
+    "unset" "1" "upgrade=1 notice=1"
     "1" "0" "upgrade=1 notice=1"
+    "0" "1" "upgrade=0 notice=1"
+    "" "1" "upgrade=1 notice=1"
+    "1" "" "upgrade=1 notice=0"
   )
   dataprovider_run "start_with_upgrade_flags" 3
 }
@@ -125,11 +128,11 @@ load _helper
 start_with_upgrade_flags() {
   local run_args=(--user 1000 -d)
 
-  if [ -n "${1}" ]; then
+  if [ "${1}" != "unset" ]; then
     run_args+=(-e "MARIADB_FORCE_UPGRADE=${1}")
   fi
 
-  if [ -n "${2}" ]; then
+  if [ "${2}" != "unset" ]; then
     run_args+=(-e "FORCE_MYSQL_UPGRADE=${2}")
   fi
 

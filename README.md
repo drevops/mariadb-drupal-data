@@ -94,7 +94,7 @@ docker run -e MARIADB_FORCE_UPGRADE=1 myorg/myimage:latest
 
 The entrypoint then runs `mariadb-upgrade --force` before the server starts accepting connections. It only does this when the data directory isn't empty, as in a seeded image, so the flag has no effect on a container that's initializing an empty data directory. Only the value `1` turns it on: `true` or `yes` leave it off.
 
-`FORCE_MYSQL_UPGRADE` is a deprecated alias for `MARIADB_FORCE_UPGRADE`: the entrypoint accepts it with lower precedence than `MARIADB_FORCE_UPGRADE` and prints a deprecation notice when it's set.
+`FORCE_MYSQL_UPGRADE` is a deprecated alias for `MARIADB_FORCE_UPGRADE`: the entrypoint falls back to it when `MARIADB_FORCE_UPGRADE` is unset or empty, and prints a deprecation notice whenever it has a value.
 
 ## Maintenance and releasing
 

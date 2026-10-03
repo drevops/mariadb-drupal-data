@@ -60,7 +60,7 @@ BATS test conventions:
 
 - Tests in `tests/bats/` with `.bats` extension
 - Helper functions in `tests/bats/_helper.bash`
-- Coverage exclusions: `# LCOV_EXCL_START` / `# LCOV_EXCL_END`
+- Coverage exclusions: `# LCOV_EXCL_START` / `# LCOV_EXCL_STOP` (the region markers kcov recognizes)
 
 Run Goss tests (structural tests):
 

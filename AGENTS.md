@@ -37,23 +37,23 @@ Shell script tests use BATS:
    - Replaces entrypoint script to support custom data directory
    - Overrides CMD to use `--datadir=/home/db-data`
 
-2. **entrypoint.bash** - Modified from [upstream](https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb/entrypoints/9999-mariadb-init.bash):
+2. **entrypoint.bash** - Modified from [upstream](https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb/entrypoints/9999-mariadb-init.10.bash):
    - Supports `MARIADB_DATA_DIR` environment variable
    - Handles database initialization in custom location
    - Supports `MARIADB_COPY_DATA_DIR_SOURCE` for pre-filling data
    - Includes `FORCE_MYSQL_UPGRADE` flag for forcing upgrades
 
-3. **seed.sh** - Three-phase database seeding script:
-   - **Phase 1**: Import SQL dump into temporary container and extract database files
-   - **Phase 2**: Build new image with extracted database files using `docker buildx`
-   - **Phase 3**: Verify database exists in the new image
+3. **seed.sh** - 3-stage database seeding script:
+   - **Stage 1**: Import SQL dump into temporary container and extract database files
+   - **Stage 2**: Build new image with extracted database files using `docker buildx`
+   - **Stage 3**: Verify database exists in the new image
    - Builds images for the host platform by default; multi-platform builds (linux/amd64, linux/arm64) are opt-in via `DESTINATION_PLATFORMS`
    - Uses `docker buildx` to push directly to registry during build
 
 ### Important Patterns
 
 - Database files must be in `/home/db-data` (not `/var/lib/mysql`)
-- Upstream base image version follows [uselagoon/mariadb-drupal tags](https://hub.docker.com/r/uselagoon/mariadb-drupal/tags)
+- Upstream base image version follows [uselagoon/mariadb-10.11-drupal tags](https://hub.docker.com/r/uselagoon/mariadb-10.11-drupal/tags)
 - The entrypoint script is minimally modified for easy upstream updates
 - Containers typically run as user `1000` (not `mysql`) in production
 
@@ -78,8 +78,8 @@ tests/bats/node_modules/.bin/bats tests/bats/seed.bats --tap
 Run Goss tests (structural tests):
 
 ```bash
-docker build -t testorg/testimage:test-tag .
-GOSS_FILES_PATH=tests/dgoss dgoss run -i testorg/testimage:test-tag
+docker build -t gosstestorg/gosstestimage:goss-test-tag .
+GOSS_FILES_PATH=tests/dgoss dgoss run -i gosstestorg/gosstestimage:goss-test-tag
 ```
 
 ### Linting
@@ -119,10 +119,10 @@ BASE_IMAGE=drevops/mariadb-drupal-data:canary ./seed.sh path/to/db.sql myorg/myi
 
 ### Platform-specific Testing
 
-Tests run for the host platform by default. To force a specific platform, set the platform variables explicitly; forcing a foreign platform requires emulation, under which MariaDB does not start reliably:
+Tests run for the host platform by default. To force a specific platform, set `DOCKER_DEFAULT_PLATFORM` (the tests derive `BUILDX_PLATFORMS` from it); forcing a foreign platform requires emulation, under which MariaDB does not start reliably:
 
 ```bash
-BUILDX_PLATFORMS=linux/arm64 DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node_modules/.bin/bats tests/bats/image.bats
+DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node_modules/.bin/bats tests/bats/image.bats
 ```
 
 ## CI/CD
@@ -149,7 +149,7 @@ BUILDX_PLATFORMS=linux/arm64 DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node
 - Multi-platform builds: `linux/amd64,linux/arm64`
 - Required secrets: `DOCKER_USER`, `DOCKER_PASS`, `CODECOV_TOKEN`
 - Required vars: `RELEASE_VERSION_SCHEME` set to `calver`
-- Optional vars: `CI_LINT_IGNORE_FAILURE`, `CI_TEST_IGNORE_FAILURE` (set to '1' to ignore failures), `DOCKER_IMAGE` (release image name, defaults to `drevops/mariadb-drupal-data`)
+- Optional vars: `CI_LINT_IGNORE_FAILURE`, `CI_TEST_IGNORE_FAILURE` (set to '1' to ignore failures), `DOCKER_IMAGE` (published image name for releases and canary, defaults to `drevops/mariadb-drupal-data`)
 
 ## Important Notes
 

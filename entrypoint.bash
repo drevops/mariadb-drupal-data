@@ -3,12 +3,9 @@
 # Entrypoint to start mysql service with custom data directory.
 #
 # This file is minimally modified to be easily updatable from the upstream.
-# @see https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb/entrypoints/9999-mariadb-init.bash
+# @see https://github.com/uselagoon/lagoon-images/blob/main/images/mariadb/entrypoints/9999-mariadb-init.10.bash
 # LCOV_EXCL_START
 set -eo pipefail
-
-# Locations
-CONTAINER_SCRIPTS_DIR="/usr/share/container-scripts/mysql"
 
 if [ "$(ls -A /etc/mysql/conf.d/)" ]; then
    ep /etc/mysql/conf.d/*
@@ -60,12 +57,14 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
   if [ -d ${MARIADB_DATA_DIR:-/var/lib/mysql} ] && [ "$(ls -A "${MARIADB_DATA_DIR:-/var/lib/mysql}")" ]; then
     echo "MySQL directory already present, skipping creation"
 
-    # @note: Added re-creation of the config for descendant images to have
-    # the same password-less client login experience as for the parent image.
-    if [ ! -f /var/lib/mysql/.my.cnf ]; then
-      echo "[client]" >> /var/lib/mysql/.my.cnf
-      echo "user=root" >> /var/lib/mysql/.my.cnf
-      echo "password=${MARIADB_ROOT_PASSWORD}"  >> /var/lib/mysql/.my.cnf
+    # @note: Recreate .my.cnf so descendant images have the same
+    # password-less client login as the parent image.
+    if [ ! -f ${MARIADB_DATA_DIR:-/var/lib/mysql}/.my.cnf ]; then
+      echo "[client]" >> ${MARIADB_DATA_DIR:-/var/lib/mysql}/.my.cnf
+      echo "user=root" >> ${MARIADB_DATA_DIR:-/var/lib/mysql}/.my.cnf
+      echo "password=${MARIADB_ROOT_PASSWORD}"  >> ${MARIADB_DATA_DIR:-/var/lib/mysql}/.my.cnf
+      echo "[mysql]" >> ${MARIADB_DATA_DIR:-/var/lib/mysql}/.my.cnf
+      echo "database=${MARIADB_DATABASE}" >> ${MARIADB_DATA_DIR:-/var/lib/mysql}/.my.cnf
     fi
 
     echo "starting mysql"
@@ -81,7 +80,7 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
       sleep $MARIADB_INIT_PERIOD_SECONDS
     done
 
-    # @note: Added a flag to force upgrade.
+    # @note: mariadb-upgrade runs only when FORCE_MYSQL_UPGRADE is 1.
     if [ "${FORCE_MYSQL_UPGRADE:-}" = "1" ]; then
       echo "starting mysql upgrade"
       # @note: mariadb-upgrade may fail on the first run due to the unresolved
@@ -174,6 +173,7 @@ EOF
   fi
 
   echo "done, now starting daemon"
+  touch /tmp/startup-init-complete
   touch /tmp/mariadb-init-complete
 
 fi

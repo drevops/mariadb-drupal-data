@@ -9,6 +9,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: ${{ matrix.name }}
@@ -43,8 +46,10 @@ jobs:
       - name: Configure Git safe directory
         run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
 
-      - name: Check out the repo
+      - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Lint shell scripts
         if: matrix.container != ''
@@ -53,14 +58,16 @@ jobs:
           shellcheck seed.sh tests/bats/*.bash tests/bats/*.bats
         continue-on-error: ${{ vars.CI_LINT_IGNORE_FAILURE == '1' }}
 
-      - name: Install goss
+      - name: Install Goss
         run: |
           GOSS_VERSION=v0.4.9
           mkdir -p "${HOME}/bin"
-          curl -fsSL "https://github.com/goss-org/goss/releases/download/${GOSS_VERSION}/goss-linux-${{ matrix.arch }}" -o "${HOME}/bin/goss"
+          curl -fsSL "https://github.com/goss-org/goss/releases/download/${GOSS_VERSION}/goss-linux-${GOSS_ARCH}" -o "${HOME}/bin/goss"
           curl -fsSL "https://github.com/goss-org/goss/releases/download/${GOSS_VERSION}/dgoss" -o "${HOME}/bin/dgoss"
           chmod +rx "${HOME}/bin/goss" "${HOME}/bin/dgoss"
           "${HOME}/bin/goss" --version
+        env:
+          GOSS_ARCH: ${{ matrix.arch }}
 
       - name: Build Docker image
         run: docker build -t gosstestorg/gosstestimage:goss-test-tag .
@@ -79,7 +86,7 @@ jobs:
         if: matrix.container != ''
         run: |
           echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin
-          kcov --include-pattern=.sh,.bash --bash-parse-files-in-dir=. --exclude-pattern=vendor,node_modules,coverage $(pwd)/coverage tests/bats/node_modules/.bin/bats tests/bats
+          kcov --include-pattern=.sh,.bash --bash-parse-files-in-dir=. --exclude-pattern=vendor,node_modules,coverage "$(pwd)/coverage" tests/bats/node_modules/.bin/bats tests/bats
         shell: bash
         continue-on-error: ${{ vars.CI_TEST_IGNORE_FAILURE == '1' }}
         env:
@@ -101,14 +108,14 @@ jobs:
         if: matrix.container != ''
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: ${{github.job}}-code-coverage-report
+          name: ${{ github.job }}-code-coverage-report
           include-hidden-files: true
           path: coverage
           if-no-files-found: error
 
       - name: Upload coverage report to Codecov
+        if: matrix.container != '' && env.CODECOV_TOKEN != ''
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
-        if: ${{ matrix.container != '' && env.CODECOV_TOKEN != '' }}
         with:
           directory: coverage
           fail_ci_if_error: true
@@ -126,6 +133,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
@@ -143,13 +152,13 @@ jobs:
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
-          images: drevops/mariadb-drupal-data
+          images: ${{ vars.DOCKER_IMAGE || 'drevops/mariadb-drupal-data' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           push: true
-          tags: drevops/mariadb-drupal-data:canary
+          tags: ${{ vars.DOCKER_IMAGE || 'drevops/mariadb-drupal-data' }}:canary
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64

@@ -3,11 +3,11 @@
 
 
 # Code coverage and test logs.
-/.logs
-coverage
+/.logs/
+/coverage/
 
 # Database files extracted by seed.sh.
-.db-structure
+/.db-structure/
 
 # Temporary AI agent and developer artifacts (plans, scratch output, reports).
 /.artifacts/

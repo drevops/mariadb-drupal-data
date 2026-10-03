@@ -204,7 +204,7 @@ load _helper
   assert_output "0"
 
   substep "Assert that the export carried over the other database, whose name has a space."
-  run docker exec --user 1000 "${cid}" /usr/bin/mysql --skip-column-names -e "SELECT id FROM \`drupal extra\`.extra;" drupal
+  run docker exec --user 1000 "${cid}" /usr/bin/mysql --skip-column-names -e 'SELECT id FROM `drupal extra`.extra;' drupal
   assert_success
   assert_output "1"
 

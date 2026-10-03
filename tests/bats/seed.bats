@@ -326,23 +326,54 @@ seed_with_sanitization() {
   mock_docker="$(mock_command "docker")"
   # The output passes the system tables and import checks.
   mock_set_output "${mock_docker}" "user_variables users"
-  # The dump call records the mode of the export it writes to, and the service
-  # check fails once the export exists.
+  # The dump call records the mode of the export it writes to. The call that
+  # matches TEST_FAILING_CALL fails once the export exists.
   mock_set_side_effect "${mock_docker}" - <<'EOF'
 if [[ "$*" == *mysqldump* ]]; then ls -l .db-sanitized.sql >export-mode.txt; fi
-if [[ "$*" == *"until nc"* ]] && [ -f .db-sanitized.sql ]; then exit 1; fi
+if [[ "$*" == *"${TEST_FAILING_CALL}"* ]] && [ -f .db-sanitized.sql ]; then exit 1; fi
 EOF
 
   cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${BUILD_DIR}/db.sql"
   cp "${BATS_TEST_DIRNAME}/fixtures/sanitize.sql" "${BUILD_DIR}/sanitize.sql"
 
-  export SANITIZE_PROCEED=1
-  export SANITIZE_FILE="${BUILD_DIR}/sanitize.sql"
-  run ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage"
-  assert_failure
-  assert_output_contains "Exported sanitized database to the .db-sanitized.sql file."
-  assert_output_contains "MySQL service did not start successfully."
-  assert_file_not_exists .db-sanitized.sql
-  assert_file_contains export-mode.txt "-rw-------"
-  assert_contains "rm -f -v" "$(mock_get_call_args "${mock_docker}")"
+  # Columns: the failing Docker call and the expected outcome.
+  # shellcheck disable=SC2034
+  TEST_CASES=(
+    "mysqldump" "failure=export export=absent mode=owner-only container=removed"
+    "until nc" "failure=service export=absent mode=owner-only container=removed"
+  )
+  dataprovider_run "seed_failing_at" 2
+}
+
+# Runs seeding with sanitization while the Docker call matching the argument
+# fails, then prints which step failed and what the cleanup left behind.
+seed_failing_at() {
+  rm -f export-mode.txt
+
+  local seed_output
+  seed_output="$(SANITIZE_PROCEED=1 SANITIZE_FILE="${BUILD_DIR}/sanitize.sql" TEST_FAILING_CALL="${1}" ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage" 2>&1)"
+
+  local failure="none"
+  if [[ ${seed_output} == *"Unable to export sanitized database to the .db-sanitized.sql file."* ]]; then
+    failure="export"
+  elif [[ ${seed_output} == *"MySQL service did not start successfully."* ]]; then
+    failure="service"
+  fi
+
+  local export_state="absent"
+  if [ -e .db-sanitized.sql ]; then
+    export_state="present"
+  fi
+
+  local mode="unknown"
+  if grep -q -- "^-rw-------" export-mode.txt 2>/dev/null; then
+    mode="owner-only"
+  fi
+
+  local container="kept"
+  if [[ "$(mock_get_call_args "${mock_docker}")" == "rm -f -v "* ]]; then
+    container="removed"
+  fi
+
+  echo "failure=${failure} export=${export_state} mode=${mode} container=${container}"
 }

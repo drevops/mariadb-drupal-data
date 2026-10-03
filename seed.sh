@@ -87,7 +87,8 @@ note() { printf "       %s\n" "${1}"; }
 [ "${DESTINATION_IMAGE##*/}" = "${DESTINATION_IMAGE}" ] && fail "${DESTINATION_IMAGE} should be in a format myorg/myimage." && exit 1
 
 restore_dockerignore() {
-  [ ! -f ".dockerignore.bak" ] && return
+  # A bare 'return' run from the EXIT trap returns the trap's failure status.
+  [ ! -f ".dockerignore.bak" ] && return 0
 
   task "Restore .dockerignore from .dockerignore.bak"
   mv .dockerignore.bak .dockerignore
@@ -102,7 +103,8 @@ restore_dockerignore() {
 
 # Removes the container that a failure left running, keeping its logs.
 remove_running_container() {
-  [ -z "${running_cid}" ] && return
+  # A bare 'return' run from the EXIT trap returns the trap's failure status.
+  [ -z "${running_cid}" ] && return 0
 
   log_container "${running_cid}" "stopped-" || true
   docker rm -f -v "${running_cid}" >/dev/null || true

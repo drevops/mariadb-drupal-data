@@ -149,6 +149,7 @@ DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node_modules/.bin/bats tests/bats
 - When updating base image version, follow upstream versioning
 - seed.sh requires being logged into Docker registry (it pushes during buildx)
 - Tests run for the host platform unless explicitly configured otherwise
+- Renovate's `github-actions` manager doesn't read workflow matrix values, so a custom regex manager in `renovate.json` tracks the `drevops/ci-runner` image in the `test.yml` matrix; it only matches the `container: <image>:<tag>@<digest>` form, so keep that form when editing the matrix
 
 ## Updating from the template
 

@@ -11,5 +11,15 @@
             "groupName": "all dependencies",
             "groupSlug": "all"
         }
+    ],
+    "customManagers": [
+        {
+            "customType": "regex",
+            "description": "Images pinned by digest in workflow matrix 'container' values.",
+            "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+            "matchStrings": ["container:\\s+(?<depName>[a-z0-9][a-z0-9._/-]*):(?<currentValue>\\w[\\w.-]*)@(?<currentDigest>sha256:[a-f0-9]{64})"],
+            "datasourceTemplate": "docker",
+            "versioningTemplate": "docker"
+        }
     ]
 }

@@ -56,6 +56,7 @@ Run specific BATS test file:
 ```bash
 tests/bats/node_modules/.bin/bats tests/bats/image.bats --tap
 tests/bats/node_modules/.bin/bats tests/bats/seed.bats --tap
+tests/bats/node_modules/.bin/bats tests/bats/helper.bats --tap
 ```
 
 BATS test conventions:

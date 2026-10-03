@@ -156,6 +156,7 @@ tests/bats/node_modules/.bin/bats tests/bats --tap
 # Individual test files.
 tests/bats/node_modules/.bin/bats tests/bats/image.bats --tap
 tests/bats/node_modules/.bin/bats tests/bats/seed.bats --tap
+tests/bats/node_modules/.bin/bats tests/bats/helper.bats --tap
 ```
 
 ### Versioning

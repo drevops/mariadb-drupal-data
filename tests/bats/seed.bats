@@ -177,13 +177,22 @@ load _helper
   assert_success
   assert_output ""
 
-  step "Assert seeding stops before building the image when the dump changes database accounts."
+  step "Assert seeding stops before building the image when the dump creates a database account."
 
   cp "${file}" "${BUILD_DIR}/db-accounts.sql"
   echo "CREATE USER 'extra'@'%' IDENTIFIED BY 'extra';" >>"${BUILD_DIR}/db-accounts.sql"
   run ./seed.sh "${BUILD_DIR}/db-accounts.sql" "${destination_image}"
   assert_failure
-  assert_output_contains "The database dump creates or changes database accounts, which the sanitized export does not carry into the image; remove those statements from the dump."
+  assert_output_contains "The database dump or the sanitization queries change database accounts or grants, which the sanitized export does not carry into the image; remove those statements."
+  assert_output_not_contains "Stage 2: Build image"
+
+  step "Assert seeding stops before building the image when the sanitization queries grant a database privilege."
+
+  echo "GRANT SELECT ON drupal.* TO 'root'@'localhost';" >"${BUILD_DIR}/grant.sql"
+  run env SANITIZE_FILE="${BUILD_DIR}/grant.sql" ./seed.sh "${file}" "${destination_image}"
+  assert_failure
+  assert_output_contains "Sanitized database with queries from the ${BUILD_DIR}/grant.sql file."
+  assert_output_contains "The database dump or the sanitization queries change database accounts or grants, which the sanitized export does not carry into the image; remove those statements."
   assert_output_not_contains "Stage 2: Build image"
 
   step "Assert seeding with sanitization works."

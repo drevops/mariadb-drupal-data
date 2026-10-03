@@ -201,9 +201,9 @@ import_db() {
   assert_db_was_imported "${1}"
 }
 
-# Prints the checksum of 'mysql.global_priv', which holds database accounts.
-checksum_accounts() {
-  docker exec "${1}" /usr/bin/mysql --skip-column-names --batch -e "CHECKSUM TABLE mysql.global_priv;"
+# Prints the checksums of the tables that hold database accounts and grants.
+checksum_privileges() {
+  docker exec "${1}" /usr/bin/mysql --skip-column-names --batch -e "CHECKSUM TABLE mysql.global_priv, mysql.db, mysql.tables_priv, mysql.columns_priv, mysql.procs_priv, mysql.proxies_priv, mysql.roles_mapping;"
 }
 
 # Sets 'cid' to the ID of the started container.
@@ -284,16 +284,8 @@ import_file="${DB_FILE}"
 # log, so the queries run in another container whose export is imported.
 if [ "${SANITIZE_PROCEED}" = "1" ]; then
   start_container "${BASE_IMAGE}"
-  accounts_before_import="$(checksum_accounts "${cid}")"
+  privileges_before_import="$(checksum_privileges "${cid}")"
   import_db "${cid}" "${DB_FILE}"
-  accounts_after_import="$(checksum_accounts "${cid}")"
-
-  # The export carries databases only, so accounts the dump creates or changes
-  # would be missing from the image.
-  if [ "${accounts_after_import}" != "${accounts_before_import}" ]; then
-    fail "The database dump creates or changes database accounts, which the sanitized export does not carry into the image; remove those statements from the dump."
-    exit 1
-  fi
 
   task "Sanitize database with queries from the ${SANITIZE_FILE} file."
   # The redirect fails on an unreadable file, so the step cannot pass without
@@ -303,6 +295,14 @@ if [ "${SANITIZE_PROCEED}" = "1" ]; then
     exit 1
   fi
   pass "Sanitized database with queries from the ${SANITIZE_FILE} file."
+
+  # The export carries databases only, so accounts and grants changed by the
+  # dump or the queries would be missing from the image.
+  privileges_after_sanitization="$(checksum_privileges "${cid}")"
+  if [ "${privileges_after_sanitization}" != "${privileges_before_import}" ]; then
+    fail "The database dump or the sanitization queries change database accounts or grants, which the sanitized export does not carry into the image; remove those statements."
+    exit 1
+  fi
 
   task "Export sanitized database to the ${TMP_SANITIZED_DB_FILE} file."
   database_names="$(docker exec "${cid}" /usr/bin/mysql --skip-column-names --batch --raw -e "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys');")"

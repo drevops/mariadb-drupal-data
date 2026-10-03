@@ -177,4 +177,4 @@ EOF
   touch /tmp/mariadb-init-complete
 
 fi
-# LCOV_EXCL_END
+# LCOV_EXCL_STOP

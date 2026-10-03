@@ -1,9 +1,9 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(./tests/bats/node_modules/bats/bin/bats:*)",
-      "Bash(docker build:*)",
-      "Bash(docker run:*)"
-    ]
-  }
+    "permissions": {
+        "allow": [
+            "Bash(tests/bats/node_modules/.bin/bats:*)",
+            "Bash(docker build:*)",
+            "Bash(docker run:*)"
+        ]
+    }
 }

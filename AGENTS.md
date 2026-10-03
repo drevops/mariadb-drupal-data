@@ -1,32 +1,12 @@
 # AGENTS.md
 
-This file provides guidance to AI agents when working with
-code in this repository.
-
+This file provides guidance to AI agents when working with code in this repository.
 
 ## Project Overview
 
 This project provides a MariaDB Docker image for Drupal that captures database data as Docker layers. Unlike traditional MariaDB containers that use volumes, this image stores database files in a non-volume location (`/home/db-data`) allowing the entire database to be captured, stored, and distributed as a Docker image.
 
 **Key Innovation**: Database files are stored as Docker layers rather than volumes, enabling instant database availability without time-consuming imports.
-
-
-```bash
-# Shell script tests
-./tests/bats/node_modules/bats/bin/bats tests/bats/
-```
-
-
-### Shell Script Testing with BATS
-
-Shell script tests use BATS:
-
-- Tests in `tests/bats/` with `.bats` extension
-- Helper functions in `tests/bats/_helper.bash`
-- Coverage exclusions: `# LCOV_EXCL_START` / `# LCOV_EXCL_END`
-
-
-- `.github/workflows/test.yml` - Shell script testing
 
 ## Architecture
 
@@ -47,6 +27,7 @@ Shell script tests use BATS:
    - **Stage 1**: Import SQL dump into temporary container and extract database files
    - **Stage 2**: Build new image with extracted database files using `docker buildx`
    - **Stage 3**: Verify database exists in the new image
+   - Takes the destination image from `DESTINATION_IMAGE`, then the deprecated `DST_IMAGE` alias, then the second argument
    - Builds images for the host platform by default; multi-platform builds (linux/amd64, linux/arm64) are opt-in via `DESTINATION_PLATFORMS`
    - Uses `docker buildx` to push directly to registry during build
 
@@ -74,6 +55,12 @@ Run specific BATS test file:
 tests/bats/node_modules/.bin/bats tests/bats/image.bats --tap
 tests/bats/node_modules/.bin/bats tests/bats/seed.bats --tap
 ```
+
+BATS test conventions:
+
+- Tests in `tests/bats/` with `.bats` extension
+- Helper functions in `tests/bats/_helper.bash`
+- Coverage exclusions: `# LCOV_EXCL_START` / `# LCOV_EXCL_STOP` (the region markers kcov recognizes)
 
 Run Goss tests (structural tests):
 
@@ -144,10 +131,14 @@ DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node_modules/.bin/bats tests/bats
 **draft-release-notes.yml** - Runs on pushes to main and on Git tags:
 - Drafts release notes using release-drafter with CalVer version when the `RELEASE_VERSION_SCHEME` variable is `calver`
 
+**assign-author.yml** - Runs when a PR is opened or reopened:
+- Assigns the PR author to the PR
+
 ### Configuration
 
 - Multi-platform builds: `linux/amd64,linux/arm64`
-- Required secrets: `DOCKER_USER`, `DOCKER_PASS`, `CODECOV_TOKEN`
+- Required secrets: `DOCKER_USER` (Docker Hub username) and `DOCKER_PASS` (Docker Hub access token)
+- Optional secrets: `CODECOV_TOKEN` (the Codecov upload is skipped without it)
 - Required vars: `RELEASE_VERSION_SCHEME` set to `calver`
 - Optional vars: `CI_LINT_IGNORE_FAILURE`, `CI_TEST_IGNORE_FAILURE` (set to '1' to ignore failures), `DOCKER_IMAGE` (published image name for releases and canary, defaults to `drevops/mariadb-drupal-data`)
 
@@ -158,53 +149,6 @@ DOCKER_DEFAULT_PLATFORM=linux/arm64 tests/bats/node_modules/.bin/bats tests/bats
 - When updating base image version, follow upstream versioning
 - seed.sh requires being logged into Docker registry (it pushes during buildx)
 - Tests run for the host platform unless explicitly configured otherwise
-
-
-## Docker
-
-### Building
-
-```bash
-# Build the Docker image
-docker build -t drevops/mariadb-drupal-data .
-
-# Run the container
-docker run --rm drevops/mariadb-drupal-data
-```
-
-### Linting
-
-```bash
-# Lint Dockerfile with hadolint
-docker run --rm -i hadolint/hadolint < Dockerfile
-```
-
-### CI/CD
-
-- `.github/workflows/test.yml` - Build and test the Docker image, and push a `canary`-tagged image on merge to `main`
-- `.github/workflows/release-docker.yml` - Build and push multi-arch image to Docker Hub on tag, and upload `seed.sh` to the release
-
-Docker Hub credentials are stored as repository secrets:
-- `DOCKER_USER` - Docker Hub username
-- `DOCKER_PASS` - Docker Hub access token
-
-Override the published image name (release) by setting the `DOCKER_IMAGE` repository or organization variable; it defaults to `drevops/mariadb-drupal-data`.
-
-
-## Documentation
-
-If using the documentation site (Docusaurus):
-
-```bash
-cd docs
-npm install
-npm start # Local dev server
-npm run build # Production build
-npm run spellcheck # CSpell validation
-```
-
-Documentation deploys automatically on releases via GitHub Actions.
-
 
 ## Updating from the template
 

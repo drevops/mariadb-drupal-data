@@ -38,7 +38,7 @@ setup() {
   if [ "${BATS_VERBOSE_RUN-}" = "1" ]; then
     debug "BUILD_DIR: ${BUILD_DIR}"
   fi
-  # LCOV_EXCL_END
+  # LCOV_EXCL_STOP
 
   DOCKER_DEFAULT_PLATFORM="${DOCKER_DEFAULT_PLATFORM:-$(host_platform)}"
   export DOCKER_DEFAULT_PLATFORM

@@ -13,6 +13,8 @@
 # Usage:
 # ./seed.sh path/to/db.sql myorg/myimage:latest
 #
+# DESTINATION_IMAGE=myorg/myimage:latest ./seed.sh path/to/db.sql
+#
 # DESTINATION_PLATFORMS=linux/amd64,linux/arm64 ./seed.sh path/to/db.sql myorg/myimage:latest
 #
 # DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
@@ -22,9 +24,10 @@
 set -eu
 [ -n "${DEBUG:-}" ] && set -x
 
-DB_FILE="${DB_FILE:-${1}}"
+DB_FILE="${DB_FILE:-${1-}}"
 
-DST_IMAGE="${DST_IMAGE:-${2}}"
+# DST_IMAGE is a deprecated alias of DESTINATION_IMAGE.
+DESTINATION_IMAGE="${DESTINATION_IMAGE:-${DST_IMAGE:-${2-}}}"
 
 # Exporting the databases needs a known data directory path, so Stage 1 uses
 # this same base image.
@@ -61,10 +64,10 @@ note() { printf "       %s\n" "${1}"; }
 # @formatter:on
 
 [ -z "${DB_FILE}" ] && fail "Path to the database dump file must be provided as the first argument." && exit 1
-[ -z "${DST_IMAGE}" ] && fail "Destination Docker image name must be provided as the second argument." && exit 1
+[ -z "${DESTINATION_IMAGE}" ] && fail "Destination Docker image name must be provided as the second argument." && exit 1
 [ ! -f "${DB_FILE}" ] && fail "Specified database dump file ${DB_FILE} does not exist." && exit 1
 [ "${BASE_IMAGE##*/}" = "${BASE_IMAGE}" ] && fail "${BASE_IMAGE} should be in a format myorg/myimage." && exit 1
-[ "${DST_IMAGE##*/}" = "${DST_IMAGE}" ] && fail "${DST_IMAGE} should be in a format myorg/myimage." && exit 1
+[ "${DESTINATION_IMAGE##*/}" = "${DESTINATION_IMAGE}" ] && fail "${DESTINATION_IMAGE} should be in a format myorg/myimage." && exit 1
 
 restore_dockerignore() {
   [ ! -f ".dockerignore.bak" ] && return
@@ -84,7 +87,8 @@ restore_dockerignore() {
 cleanup() {
   if [ $? -ne 0 ]; then
     fail "Collecting logs after failure."
-    if [ -d "${LOG_DIR}" ] && [ -z "${LOG_IS_VERBOSE}" ]; then
+    # An unmatched glob stays literal, so check for a log file before looping.
+    if [ -z "${LOG_IS_VERBOSE}" ] && compgen -G "${LOG_DIR}/*.log" >/dev/null; then
       for log_file in "${LOG_DIR}"/*.log; do
         echo
         note "--- Displaying ${log_file} ---"
@@ -195,10 +199,14 @@ if [ -n "${DOCKER_DEFAULT_PLATFORM}" ]; then
 fi
 
 # Normalize image - add ":latest" if tag was not provided.
-[ -n "${DST_IMAGE##*:*}" ] && DST_IMAGE="${DST_IMAGE}:latest"
+[ -n "${DESTINATION_IMAGE##*:*}" ] && DESTINATION_IMAGE="${DESTINATION_IMAGE}:latest"
 note "Host platform: ${HOST_PLATFORM}"
-note "Destination image: ${DST_IMAGE}"
+note "Destination image: ${DESTINATION_IMAGE}"
 note "Destination platform(s): ${DESTINATION_PLATFORMS}"
+
+if [ -n "${DST_IMAGE:-}" ]; then
+  note "DST_IMAGE is deprecated; use DESTINATION_IMAGE instead."
+fi
 
 if [ -f ".dockerignore" ]; then
   task "Move .dockerignore to .dockerignore.bak"
@@ -243,8 +251,8 @@ stop_container "${cid}"
 
 info "Stage 2: Build image"
 
-task "Build image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s) from ${BASE_IMAGE}."
-cat <<EOF | docker buildx build --no-cache --build-arg="BASE_IMAGE=${BASE_IMAGE}" --platform "${DESTINATION_PLATFORMS}" --tag "${DST_IMAGE}" --push -f - .
+task "Build image ${DESTINATION_IMAGE} for ${DESTINATION_PLATFORMS} platform(s) from ${BASE_IMAGE}."
+cat <<EOF | docker buildx build --no-cache --build-arg="BASE_IMAGE=${BASE_IMAGE}" --platform "${DESTINATION_PLATFORMS}" --tag "${DESTINATION_IMAGE}" --push -f - .
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 COPY --chown=mysql:mysql ${TMP_STRUCTURE_DIR} /home/db-data/
@@ -252,15 +260,15 @@ USER root
 RUN /bin/fix-permissions /home/db-data
 USER mysql
 EOF
-pass "Built image ${DST_IMAGE} for ${DESTINATION_PLATFORMS} platform(s) from ${BASE_IMAGE}."
+pass "Built image ${DESTINATION_IMAGE} for ${DESTINATION_PLATFORMS} platform(s) from ${BASE_IMAGE}."
 
 info "Stage 3: Test image"
 
-start_container "${DST_IMAGE}" 1000
+start_container "${DESTINATION_IMAGE}" 1000
 assert_db_was_imported "${cid}" 1000
 stop_container "${cid}"
 
 restore_dockerignore
 
 info "Finished database seeding."
-note "https://hub.docker.com/r/${DST_IMAGE%:*}/tags"
+note "https://hub.docker.com/r/${DESTINATION_IMAGE%:*}/tags"

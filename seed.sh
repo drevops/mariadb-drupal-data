@@ -201,9 +201,11 @@ import_db() {
   assert_db_was_imported "${1}"
 }
 
-# Prints the checksums of the tables that hold database accounts and grants.
-checksum_privileges() {
-  docker exec "${1}" /usr/bin/mysql --skip-column-names --batch -e "CHECKSUM TABLE mysql.global_priv, mysql.db, mysql.tables_priv, mysql.columns_priv, mysql.procs_priv, mysql.proxies_priv, mysql.roles_mapping;"
+# Prints the checksums of the system tables that hold accounts, grants, time
+# zones, plugins, servers and functions. Importing ordinary dumps leaves them
+# unchanged, unlike the statistics tables in the same database.
+checksum_system_tables() {
+  docker exec "${1}" /usr/bin/mysql --skip-column-names --batch -e "CHECKSUM TABLE mysql.global_priv, mysql.db, mysql.tables_priv, mysql.columns_priv, mysql.procs_priv, mysql.proxies_priv, mysql.roles_mapping, mysql.time_zone, mysql.time_zone_leap_second, mysql.time_zone_name, mysql.time_zone_transition, mysql.time_zone_transition_type, mysql.plugin, mysql.servers, mysql.func;"
 }
 
 # Sets 'cid' to the ID of the started container.
@@ -284,7 +286,7 @@ import_file="${DB_FILE}"
 # log, so the queries run in another container whose export is imported.
 if [ "${SANITIZE_PROCEED}" = "1" ]; then
   start_container "${BASE_IMAGE}"
-  privileges_before_import="$(checksum_privileges "${cid}")"
+  system_tables_before_import="$(checksum_system_tables "${cid}")"
   import_db "${cid}" "${DB_FILE}"
 
   task "Sanitize database with queries from the ${SANITIZE_FILE} file."
@@ -296,11 +298,11 @@ if [ "${SANITIZE_PROCEED}" = "1" ]; then
   fi
   pass "Sanitized database with queries from the ${SANITIZE_FILE} file."
 
-  # The export carries databases only, so accounts and grants changed by the
-  # dump or the queries would be missing from the image.
-  privileges_after_sanitization="$(checksum_privileges "${cid}")"
-  if [ "${privileges_after_sanitization}" != "${privileges_before_import}" ]; then
-    fail "The database dump or the sanitization queries change database accounts or grants, which the sanitized export does not carry into the image; remove those statements."
+  # The export carries databases only, so changes the dump or the queries make
+  # to these system tables would be missing from the image.
+  system_tables_after_sanitization="$(checksum_system_tables "${cid}")"
+  if [ "${system_tables_after_sanitization}" != "${system_tables_before_import}" ]; then
+    fail "The database dump or the sanitization queries change accounts, grants or other tables in the 'mysql' system database, which the sanitized export does not carry into the image; remove those statements."
     exit 1
   fi
 

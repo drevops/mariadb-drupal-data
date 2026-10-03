@@ -125,7 +125,7 @@ MariaDB keeps recent changes in its redo log, and the redo log is part of the da
 
 The cost is time: the database is imported twice. The export, `.db-sanitized.sql` in the working directory, also takes up disk space while seeding runs. `seed.sh` removes it once it's imported or when seeding fails, and won't start if a file already exists at that path, so it never deletes a file it didn't create.
 
-The export carries the databases, not the database accounts and their grants. If the dump or your queries create or change accounts or grants, for example with `CREATE USER` or `GRANT`, seeding with sanitization stops before it builds anything, because those changes wouldn't make it into the image. Dumps made with `drush sql:dump` don't contain accounts or grants.
+The export carries your databases, not the server's own `mysql` database, where accounts, grants and time zone data live. If the dump or your queries change them, for example with `CREATE USER` or `GRANT`, seeding with sanitization stops before it builds anything, because those changes wouldn't make it into the image. Dumps made with `drush sql:dump` don't touch the `mysql` database.
 
 `seed.sh` doesn't change the dump file itself. If the dump mustn't leave production in the first place, sanitize it as you export it, for example with [Drush GDPR Dumper](https://github.com/robiningelbrecht/drush-gdpr-dumper) or [MTK](https://github.com/skpr/mtk).
 

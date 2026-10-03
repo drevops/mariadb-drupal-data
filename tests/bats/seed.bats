@@ -183,7 +183,16 @@ load _helper
   echo "CREATE USER 'extra'@'%' IDENTIFIED BY 'extra';" >>"${BUILD_DIR}/db-accounts.sql"
   run ./seed.sh "${BUILD_DIR}/db-accounts.sql" "${destination_image}"
   assert_failure
-  assert_output_contains "The database dump or the sanitization queries change database accounts or grants, which the sanitized export does not carry into the image; remove those statements."
+  assert_output_contains "The database dump or the sanitization queries change accounts, grants or other tables in the 'mysql' system database, which the sanitized export does not carry into the image; remove those statements."
+  assert_output_not_contains "Stage 2: Build image"
+
+  step "Assert seeding stops before building the image when the dump changes the time zone tables."
+
+  cp "${file}" "${BUILD_DIR}/db-time-zones.sql"
+  echo "INSERT INTO mysql.time_zone (Use_leap_seconds) VALUES ('N');" >>"${BUILD_DIR}/db-time-zones.sql"
+  run ./seed.sh "${BUILD_DIR}/db-time-zones.sql" "${destination_image}"
+  assert_failure
+  assert_output_contains "The database dump or the sanitization queries change accounts, grants or other tables in the 'mysql' system database, which the sanitized export does not carry into the image; remove those statements."
   assert_output_not_contains "Stage 2: Build image"
 
   step "Assert seeding stops before building the image when the sanitization queries grant a database privilege."
@@ -192,7 +201,7 @@ load _helper
   run env SANITIZE_FILE="${BUILD_DIR}/grant.sql" ./seed.sh "${file}" "${destination_image}"
   assert_failure
   assert_output_contains "Sanitized database with queries from the ${BUILD_DIR}/grant.sql file."
-  assert_output_contains "The database dump or the sanitization queries change database accounts or grants, which the sanitized export does not carry into the image; remove those statements."
+  assert_output_contains "The database dump or the sanitization queries change accounts, grants or other tables in the 'mysql' system database, which the sanitized export does not carry into the image; remove those statements."
   assert_output_not_contains "Stage 2: Build image"
 
   step "Assert seeding with sanitization works."

@@ -462,10 +462,13 @@ EOF
 
 @test "Container logs are streamed when LOG_IS_VERBOSE is set" {
   mock_docker="$(mock_command "docker")"
-  # The output passes the system tables and import checks.
-  mock_set_output "${mock_docker}" "user_variables users"
+  # Every other call prints what the system tables and import checks look for.
   mock_set_side_effect "${mock_docker}" - <<'EOF'
-if [ "${1}" = "logs" ]; then echo "Fake container log line."; fi
+case "${1}" in
+  run) echo "fake-container" ;;
+  logs) echo "Fake container log line." ;;
+  *) echo "user_variables users" ;;
+esac
 EOF
 
   cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${BUILD_DIR}/db.sql"
@@ -477,5 +480,5 @@ EOF
   assert_output_contains "Unable to copy expanded database files to host"
   assert_output_contains "Fake container log line."
   assert_output_contains "No logs available to display."
-  assert_file_contains ".logs/user_variables users.log" "Fake container log line."
+  assert_file_contains ".logs/fake-container.log" "Fake container log line."
 }

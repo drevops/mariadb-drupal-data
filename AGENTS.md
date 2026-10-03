@@ -21,7 +21,7 @@ This project provides a MariaDB Docker image for Drupal that captures database d
    - Supports `MARIADB_DATA_DIR` environment variable
    - Handles database initialization in custom location
    - Supports `MARIADB_COPY_DATA_DIR_SOURCE` for pre-filling data
-   - Includes `FORCE_MYSQL_UPGRADE` flag for forcing upgrades
+   - Includes `MARIADB_FORCE_UPGRADE` flag for forcing upgrades, with `FORCE_MYSQL_UPGRADE` as a deprecated alias
 
 3. **seed.sh** - 3-stage database seeding script:
    - **Stage 1**: Import SQL dump into temporary container and extract database files

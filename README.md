@@ -84,6 +84,18 @@ You can also set the destination image in `DESTINATION_IMAGE`, which takes prece
 
 Note that you should already be logged in to the registry as `seed.sh` will be pushing an image as a part of `docker buildx` process.
 
+## Forcing a database upgrade on start
+
+Containers skip `mariadb-upgrade` by default, so a container started from a seeded image doesn't check every table before the server comes up. Set `MARIADB_FORCE_UPGRADE=1` when you do need the upgrade, for example when the database files came from an older MariaDB server than the one in the image:
+
+```shell
+docker run -e MARIADB_FORCE_UPGRADE=1 myorg/myimage:latest
+```
+
+The entrypoint then runs `mariadb-upgrade --force` before the server starts accepting connections. It only does this when the data directory isn't empty, as in a seeded image, so the flag has no effect on a container that's initializing an empty data directory. Only the value `1` turns it on: `true` or `yes` leave it off.
+
+`FORCE_MYSQL_UPGRADE` is a deprecated alias for `MARIADB_FORCE_UPGRADE`: the entrypoint accepts it with lower precedence than `MARIADB_FORCE_UPGRADE` and prints a deprecation notice when it's set.
+
 ## Maintenance and releasing
 
 ### Running tests

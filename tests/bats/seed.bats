@@ -161,6 +161,7 @@ load _helper
 
   # Columns: DESTINATION_IMAGE, DST_IMAGE, the second argument and the
   # expected output. An empty value leaves that source unset.
+  # shellcheck disable=SC2034
   TEST_CASES=(
     "" "" "myorg/argument" "Destination image: myorg/argument:latest"
     "myorg/destination:1.0" "" "" "Destination image: myorg/destination:1.0"

@@ -5,8 +5,9 @@
 /.logs/
 /coverage/
 
-# Database files extracted by seed.sh.
+# Database files created by seed.sh.
 /.db-structure/
+/.db-sanitized.sql
 
 # Temporary AI agent and developer artifacts (plans, scratch output, reports).
 /.artifacts/

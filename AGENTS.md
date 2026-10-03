@@ -28,6 +28,7 @@ This project provides a MariaDB Docker image for Drupal that captures database d
    - **Stage 2**: Build new image with extracted database files using `docker buildx`
    - **Stage 3**: Verify database exists in the new image
    - Takes the destination image from `DESTINATION_IMAGE`, then the deprecated `DST_IMAGE` alias, then the second argument
+   - When `SANITIZE_PROCEED` is `1` (default `0`; `true` leaves it off), runs the SQL queries from `SANITIZE_FILE` (default `./scripts/sanitize.sql`) in a separate container and imports that container's export into the captured one; a failing query, or a dump or query that changes accounts, grants or other tables in the `mysql` system database, stops seeding before Stage 2
    - Builds images for the host platform by default; multi-platform builds (linux/amd64, linux/arm64) are opt-in via `DESTINATION_PLATFORMS`
    - Uses `docker buildx` to push directly to registry during build
 
@@ -37,6 +38,7 @@ This project provides a MariaDB Docker image for Drupal that captures database d
 - Upstream base image version follows [uselagoon/mariadb-10.11-drupal tags](https://hub.docker.com/r/uselagoon/mariadb-10.11-drupal/tags)
 - The entrypoint script is minimally modified for easy upstream updates
 - Containers typically run as user `1000` (not `mysql`) in production
+- Sanitization must not run in the captured container: InnoDB's redo log keeps the replaced values, and the redo log is captured with the data files
 
 ## Development Commands
 
@@ -54,6 +56,7 @@ Run specific BATS test file:
 ```bash
 tests/bats/node_modules/.bin/bats tests/bats/image.bats --tap
 tests/bats/node_modules/.bin/bats tests/bats/seed.bats --tap
+tests/bats/node_modules/.bin/bats tests/bats/helper.bats --tap
 ```
 
 BATS test conventions:
@@ -96,6 +99,12 @@ Seed image with database (multi-platform):
 
 ```bash
 DESTINATION_PLATFORMS=linux/amd64,linux/arm64 ./seed.sh path/to/db.sql myorg/myimage:latest
+```
+
+Seed image with a sanitized database:
+
+```bash
+SANITIZE_PROCEED=1 SANITIZE_FILE=path/to/sanitize.sql ./seed.sh path/to/db.sql myorg/myimage:latest
 ```
 
 Use custom base image:

@@ -49,6 +49,15 @@ load _helper
   assert_success
   assert_output_contains "users"
 
+  substep "Assert that the data was captured as imported without sanitization."
+  run docker exec --user 1000 "${cid}" /usr/bin/mysql -e "SELECT mail FROM users_field_data WHERE uid = 1;" drupal
+  assert_success
+  assert_output_contains "admin@example.com"
+
+  # Control for the sanitization test, where the same search must find nothing.
+  run docker run --rm --entrypoint grep "${destination_image}" -rl "admin@example.com" /home/db-data
+  assert_success
+
   substep "Assert that the mysql upgrade was skipped by default."
   run docker logs "${cid}"
   assert_success
@@ -136,6 +145,103 @@ load _helper
   assert_output_contains "users"
 }
 
+@test "Seeding sanitizes the data when SANITIZE_PROCEED is 1" {
+  tag="${TEST_DOCKER_TAG}"
+  export BASE_IMAGE="drevops/mariadb-drupal-data-test:${tag}-base"
+  destination_image="drevops/mariadb-drupal-data-test:${tag}-destination"
+
+  step "Prepare base image."
+
+  substep "Copy fixture database dump and sanitization file to the default SANITIZE_FILE location."
+  file="${BUILD_DIR}/db.sql"
+  cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${file}"
+  mkdir -p scripts
+  cp "${BATS_TEST_DIRNAME}/fixtures/sanitize.sql" scripts/sanitize.sql
+
+  substep "Build and push a fresh base image tagged with ${BASE_IMAGE}."
+  docker buildx build --platform "${BUILDX_PLATFORMS}" --load --push --no-cache -t "${BASE_IMAGE}" .
+
+  export DESTINATION_PLATFORMS="${BUILDX_PLATFORMS}"
+  export SANITIZE_PROCEED=1
+
+  step "Assert seeding stops before building the image when a sanitization query fails."
+
+  echo "UPDATE missing_table SET mail = NULL;" >"${BUILD_DIR}/broken.sql"
+  run env SANITIZE_FILE="${BUILD_DIR}/broken.sql" ./seed.sh "${file}" "${destination_image}"
+  assert_failure
+  assert_output_contains "Unable to sanitize database with queries from the ${BUILD_DIR}/broken.sql file."
+  assert_output_not_contains "Stage 2: Build image"
+
+  substep "Assert that the container holding the unsanitized database was removed."
+  run docker ps --all --quiet --filter "ancestor=${BASE_IMAGE}"
+  assert_success
+  assert_output ""
+
+  step "Assert seeding stops before building the image when the dump creates a database account."
+
+  cp "${file}" "${BUILD_DIR}/db-accounts.sql"
+  echo "CREATE USER 'extra'@'%' IDENTIFIED BY 'extra';" >>"${BUILD_DIR}/db-accounts.sql"
+  run ./seed.sh "${BUILD_DIR}/db-accounts.sql" "${destination_image}"
+  assert_failure
+  assert_output_contains "The database dump or the sanitization queries change accounts, grants or other tables in the 'mysql' system database, which the sanitized export does not carry into the image; remove those statements."
+  assert_output_not_contains "Stage 2: Build image"
+
+  step "Assert seeding stops before building the image when the dump changes the time zone tables."
+
+  cp "${file}" "${BUILD_DIR}/db-time-zones.sql"
+  echo "INSERT INTO mysql.time_zone (Use_leap_seconds) VALUES ('N');" >>"${BUILD_DIR}/db-time-zones.sql"
+  run ./seed.sh "${BUILD_DIR}/db-time-zones.sql" "${destination_image}"
+  assert_failure
+  assert_output_contains "The database dump or the sanitization queries change accounts, grants or other tables in the 'mysql' system database, which the sanitized export does not carry into the image; remove those statements."
+  assert_output_not_contains "Stage 2: Build image"
+
+  step "Assert seeding stops before building the image when the sanitization queries grant a database privilege."
+
+  echo "GRANT SELECT ON drupal.* TO 'root'@'localhost';" >"${BUILD_DIR}/grant.sql"
+  run env SANITIZE_FILE="${BUILD_DIR}/grant.sql" ./seed.sh "${file}" "${destination_image}"
+  assert_failure
+  assert_output_contains "Sanitized database with queries from the ${BUILD_DIR}/grant.sql file."
+  assert_output_contains "The database dump or the sanitization queries change accounts, grants or other tables in the 'mysql' system database, which the sanitized export does not carry into the image; remove those statements."
+  assert_output_not_contains "Stage 2: Build image"
+
+  step "Assert seeding with sanitization works."
+
+  run ./seed.sh "${file}" "${destination_image}"
+  assert_success
+  assert_output_contains "Sanitization: enabled; the queries from ./scripts/sanitize.sql run before the database is captured."
+  assert_output_contains "Sanitized database with queries from the ./scripts/sanitize.sql file."
+  assert_file_not_exists .db-sanitized.sql
+
+  substep "Start container from the seeded image ${destination_image}."
+  # The container runs as a non-root user to imitate limited host permissions.
+  cid="$(docker run --user 1000 -d "${destination_image}" 2>&3)"
+
+  wait_mysql "${cid}"
+
+  substep "Assert that the personal data was replaced and the 4-byte character survived the export."
+  run docker exec --user 1000 "${cid}" /usr/bin/mysql --default-character-set=utf8mb4 -e "SELECT name, mail, init FROM users_field_data WHERE uid = 1;" drupal
+  assert_success
+  assert_output_contains "user 1 🧹"
+  assert_output_contains "user+1@localhost"
+  assert_output_not_contains "admin@example.com"
+
+  substep "Assert that the truncated table is empty."
+  run docker exec --user 1000 "${cid}" /usr/bin/mysql --skip-column-names -e "SELECT COUNT(*) FROM watchdog;" drupal
+  assert_success
+  assert_output "0"
+
+  substep "Assert that the export carried over the other database, whose name has a space."
+  run docker exec --user 1000 "${cid}" /usr/bin/mysql --skip-column-names -e 'SELECT id FROM `drupal extra`.extra;' drupal
+  assert_success
+  assert_output "1"
+
+  substep "Assert that no data file in the image holds the original value."
+  # The default seeding test finds this value with the same search.
+  run docker run --rm --entrypoint grep "${destination_image}" -rl "admin@example.com" /home/db-data
+  assert_output ""
+  assert_equal "1" "${status}"
+}
+
 @test "Seeding restores .dockerignore when it fails before a container starts" {
   # Every Docker call fails, so seeding stops at the base image pull.
   mock_docker="$(mock_command "docker")"
@@ -188,4 +294,200 @@ seed_with_destination() {
   fi
 
   DESTINATION_IMAGE="${1}" DST_IMAGE="${2}" ./seed.sh "${args[@]}"
+}
+
+@test "Sanitization is validated and announced before seeding starts" {
+  # Every Docker call fails, so seeding stops after printing its settings.
+  mock_docker="$(mock_command "docker")"
+  mock_set_status "${mock_docker}" 1
+
+  cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${BUILD_DIR}/db.sql"
+  cp "${BATS_TEST_DIRNAME}/fixtures/sanitize.sql" "${BUILD_DIR}/sanitize.sql"
+  echo "unrelated" >"${BUILD_DIR}/unrelated.sql"
+
+  substep "Assert that a missing sanitization file stops seeding before any Docker call."
+  run seed_with_sanitization "1" "${BUILD_DIR}/missing.sql" ""
+  assert_failure
+  assert_output_contains "Specified sanitization file ${BUILD_DIR}/missing.sql does not exist."
+  assert_equal "0" "$(mock_get_call_num "${mock_docker}")"
+
+  # Columns: the SANITIZE_PROCEED, SANITIZE_FILE and TMP_SANITIZED_DB_FILE
+  # values and the expected output. An empty value leaves the default.
+  # shellcheck disable=SC2034
+  TEST_CASES=(
+    "" "" "" "Sanitization: disabled; set SANITIZE_PROCEED=1 to sanitize the database before it is captured."
+    "0" "${BUILD_DIR}/sanitize.sql" "" "Sanitization: disabled; set SANITIZE_PROCEED=1 to sanitize the database before it is captured."
+    "true" "${BUILD_DIR}/sanitize.sql" "" "Sanitization: disabled; set SANITIZE_PROCEED=1 to sanitize the database before it is captured."
+    "1" "${BUILD_DIR}/sanitize.sql" "" "Sanitization: enabled; the queries from ${BUILD_DIR}/sanitize.sql run before the database is captured."
+    "1" "" "" "Specified sanitization file ./scripts/sanitize.sql does not exist."
+    "1" "${BUILD_DIR}/missing.sql" "" "Specified sanitization file ${BUILD_DIR}/missing.sql does not exist."
+    "1" "${BUILD_DIR}" "" "Specified sanitization file ${BUILD_DIR} does not exist."
+    "0" "${BUILD_DIR}/missing.sql" "" "Sanitization: disabled; set SANITIZE_PROCEED=1 to sanitize the database before it is captured."
+    "1" "${BUILD_DIR}/sanitize.sql" "db.sql" "Sanitized database export file db.sql already exists; remove it or set TMP_SANITIZED_DB_FILE to another path."
+    "1" "${BUILD_DIR}/sanitize.sql" "${BUILD_DIR}/sanitize.sql" "Sanitized database export file ${BUILD_DIR}/sanitize.sql already exists; remove it or set TMP_SANITIZED_DB_FILE to another path."
+    "1" "${BUILD_DIR}/sanitize.sql" "${BUILD_DIR}/unrelated.sql" "Sanitized database export file ${BUILD_DIR}/unrelated.sql already exists; remove it or set TMP_SANITIZED_DB_FILE to another path."
+    "0" "${BUILD_DIR}/sanitize.sql" "${BUILD_DIR}/unrelated.sql" "Sanitization: disabled; set SANITIZE_PROCEED=1 to sanitize the database before it is captured."
+  )
+  dataprovider_run "seed_with_sanitization" 4
+
+  substep "Assert that existing files at the export path were kept."
+  assert_file_exists "${BUILD_DIR}/db.sql"
+  assert_file_exists "${BUILD_DIR}/sanitize.sql"
+  assert_file_contains "${BUILD_DIR}/unrelated.sql" "unrelated"
+}
+
+seed_with_sanitization() {
+  SANITIZE_PROCEED="${1}" SANITIZE_FILE="${2}" TMP_SANITIZED_DB_FILE="${3}" ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage"
+}
+
+@test "Seeding removes the sanitized export and the running container when it fails" {
+  mock_docker="$(mock_command "docker")"
+  # The output passes the system tables and import checks.
+  mock_set_output "${mock_docker}" "user_variables users"
+  # The dump call records the mode of the export it writes to. The call that
+  # matches TEST_FAILING_CALL fails once the export exists.
+  mock_set_side_effect "${mock_docker}" - <<'EOF'
+if [[ "$*" == *mysqldump* ]]; then ls -l .db-sanitized.sql >export-mode.txt; fi
+if [[ "$*" == *"${TEST_FAILING_CALL}"* ]] && [ -f .db-sanitized.sql ]; then exit 1; fi
+EOF
+
+  cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${BUILD_DIR}/db.sql"
+  cp "${BATS_TEST_DIRNAME}/fixtures/sanitize.sql" "${BUILD_DIR}/sanitize.sql"
+
+  # Columns: the failing Docker call and the expected outcome.
+  # shellcheck disable=SC2034
+  TEST_CASES=(
+    "mysqldump" "failure=export export=absent mode=owner-only container=removed"
+    "until nc" "failure=service export=absent mode=owner-only container=removed"
+  )
+  dataprovider_run "seed_failing_at" 2
+}
+
+# Runs seeding with sanitization while the Docker call matching the argument
+# fails, then prints which step failed and what the cleanup left behind.
+seed_failing_at() {
+  rm -f export-mode.txt
+
+  local seed_output
+  seed_output="$(SANITIZE_PROCEED=1 SANITIZE_FILE="${BUILD_DIR}/sanitize.sql" TEST_FAILING_CALL="${1}" ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage" 2>&1)"
+
+  local failure="none"
+  if [[ ${seed_output} == *"Unable to export sanitized database to the .db-sanitized.sql file."* ]]; then
+    failure="export"
+  elif [[ ${seed_output} == *"MySQL service did not start successfully."* ]]; then
+    failure="service"
+  fi
+
+  local export_state="absent"
+  if [ -e .db-sanitized.sql ]; then
+    export_state="present"
+  fi
+
+  local mode="unknown"
+  if grep -q -- "^-rw-------" export-mode.txt 2>/dev/null; then
+    mode="owner-only"
+  fi
+
+  local container="kept"
+  if [[ "$(mock_get_call_args "${mock_docker}")" == "rm -f -v "* ]]; then
+    container="removed"
+  fi
+
+  echo "failure=${failure} export=${export_state} mode=${mode} container=${container}"
+}
+
+@test "Host platform is detected from the machine architecture" {
+  # Every Docker call fails, so seeding stops after printing its settings.
+  mock_docker="$(mock_command "docker")"
+  mock_set_status "${mock_docker}" 1
+  mock_uname="$(mock_command "uname")"
+
+  cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${BUILD_DIR}/db.sql"
+
+  # Columns: the 'uname -m' output and the expected output.
+  # shellcheck disable=SC2034
+  TEST_CASES=(
+    "x86_64" "Host platform: linux/amd64"
+    "arm64" "Host platform: linux/arm64"
+    "aarch64" "Host platform: linux/arm64"
+    "riscv64" "Host platform: linux/riscv64"
+  )
+  dataprovider_run "seed_on_machine" 2
+}
+
+seed_on_machine() {
+  mock_set_output "${mock_uname}" "${1}"
+  ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage"
+}
+
+@test "Seeding stops when the database checks in a container fail" {
+  mock_docker="$(mock_command "docker")"
+
+  cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${BUILD_DIR}/db.sql"
+
+  # Columns: the output of every Docker call and the expected output. The
+  # system tables check looks for 'user_variables', and the import check
+  # looks for 'users'.
+  # shellcheck disable=SC2034
+  TEST_CASES=(
+    "no-tables" "Database system tables are not present in container no-tables"
+    "user_variables" "Imported database does not exist in container user_variables"
+  )
+  dataprovider_run "seed_with_docker_output" 2
+}
+
+seed_with_docker_output() {
+  mock_set_output "${mock_docker}" "${1}"
+  ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage"
+}
+
+@test "Seeding stops when .dockerignore cannot be moved or restored" {
+  # Every Docker call fails, so seeding stops at the base image pull.
+  mock_docker="$(mock_command "docker")"
+  mock_set_status "${mock_docker}" 1
+
+  cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${BUILD_DIR}/db.sql"
+  echo ".db-structure" >.dockerignore
+
+  step "Assert that seeding stops when .dockerignore is not moved."
+  # The 'mv' mock succeeds without moving anything.
+  mock_command "mv" >/dev/null
+  run ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage"
+  assert_failure
+  assert_output_contains "Unable to move .dockerignore to .dockerignore.bak"
+  assert_file_exists .dockerignore
+
+  step "Assert that seeding reports a .dockerignore that is not restored."
+  # The 'mv' mock moves .dockerignore away, then succeeds without restoring it.
+  mock_mv="$(mock_command "mv")"
+  mock_set_side_effect "${mock_mv}" - 1 <<'EOF'
+command -p mv "$@"
+EOF
+  run ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage"
+  assert_failure
+  assert_output_contains "Unable to restore .dockerignore from .dockerignore.bak"
+  assert_file_exists .dockerignore.bak
+}
+
+@test "Container logs are streamed when LOG_IS_VERBOSE is set" {
+  mock_docker="$(mock_command "docker")"
+  # Every other call prints what the system tables and import checks look for.
+  mock_set_side_effect "${mock_docker}" - <<'EOF'
+case "${1}" in
+  run) echo "fake-container" ;;
+  logs) echo "Fake container log line." ;;
+  *) echo "user_variables users" ;;
+esac
+EOF
+
+  cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${BUILD_DIR}/db.sql"
+
+  # The 'docker cp' mock copies nothing, so seeding stops in Stage 1 after the
+  # container logs were collected.
+  run env LOG_IS_VERBOSE=1 ./seed.sh "${BUILD_DIR}/db.sql" "myorg/myimage"
+  assert_failure
+  assert_output_contains "Unable to copy expanded database files to host"
+  assert_output_contains "Fake container log line."
+  assert_output_contains "No logs available to display."
+  assert_file_contains ".logs/fake-container.log" "Fake container log line."
 }

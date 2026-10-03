@@ -68,6 +68,9 @@ chmod +x seed.sh
 # with the destination image from the environment
 DESTINATION_IMAGE=myorg/myimage:latest ./seed.sh path/to/db.sql
 
+# with database sanitization using the queries from ./scripts/sanitize.sql
+SANITIZE_PROCEED=1 ./seed.sh path/to/db.sql myorg/myimage:latest
+
 # with forced source platform
 DOCKER_DEFAULT_PLATFORM=linux/amd64 ./seed.sh path/to/db.sql myorg/myimage:latest
 
@@ -83,6 +86,48 @@ By default, the script builds an image for the host platform (`linux/amd64` on I
 You can also set the destination image in `DESTINATION_IMAGE`, which takes precedence over the second argument. `DST_IMAGE` is a deprecated alias for it: the script accepts it with lower precedence than `DESTINATION_IMAGE` and prints a deprecation notice when it's set.
 
 Note that you should already be logged in to the registry as `seed.sh` will be pushing an image as a part of `docker buildx` process.
+
+## Sanitizing the database
+
+Set `SANITIZE_PROCEED=1`, and `seed.sh` runs the SQL queries from `SANITIZE_FILE` against the imported database before it captures the database into the image. It's the place to replace personal data and to empty the tables developers don't need, like logs, sessions and caches:
+
+```shell
+# with the queries from ./scripts/sanitize.sql
+SANITIZE_PROCEED=1 ./seed.sh path/to/db.sql myorg/myimage:latest
+
+# with the queries from another file
+SANITIZE_PROCEED=1 SANITIZE_FILE=path/to/sanitize.sql ./seed.sh path/to/db.sql myorg/myimage:latest
+```
+
+Sanitization is opt-in. `SANITIZE_PROCEED` is `0` by default, and only the value `1` turns it on: `true` or `yes` leave it off. While it's off, the image holds the database exactly as it was in the dump, and `SANITIZE_FILE` on its own changes nothing. The script prints which of the 2 it's doing before any work starts, so the CI log always shows what kind of image it pushed:
+
+```text
+Sanitization: enabled; the queries from ./scripts/sanitize.sql run before the database is captured.
+```
+
+`SANITIZE_FILE` defaults to `./scripts/sanitize.sql`, relative to the directory you run `seed.sh` from, which is where Vortex projects keep their sanitization queries. If the file doesn't exist, seeding stops before it starts any container.
+
+The queries run with the `mysql` client against the database the dump was imported into, so table names don't need a database prefix. The client uses `utf8mb4`, so text with emoji works without a `SET NAMES` line. If any query fails, seeding stops before the image is built, so a half-sanitized image never reaches the registry.
+
+A file like Vortex's [`scripts/sanitize.sql`](https://github.com/drevops/vortex/blob/main/scripts/sanitize.sql) works as is. Keep in mind that Vortex runs that file after `drush sql:sanitize`, while `seed.sh` runs only your queries, so email addresses and passwords stay as they are unless the file changes them:
+
+```sql
+-- Replace email addresses, so no message can reach a real user.
+UPDATE `users_field_data` SET `mail` = CONCAT('user+', `uid`, '@localhost'), `init` = CONCAT('user+', `uid`, '@localhost') WHERE `uid` > 0;
+
+-- Remove sessions.
+TRUNCATE TABLE `sessions`;
+```
+
+### Why sanitizing takes a second import
+
+MariaDB keeps recent changes in its redo log, and the redo log is part of the data that `seed.sh` captures. Sanitizing the captured database in place would leave the original values readable in the image. So `seed.sh` imports the dump and runs your queries in a separate container, exports the result, and imports that export into the container it captures, which never holds the original values.
+
+The cost is time: the database is imported twice. The export, `.db-sanitized.sql` in the working directory, also takes up disk space while seeding runs. `seed.sh` removes it once it's imported or when seeding fails, and won't start if a file already exists at that path, so it never deletes a file it didn't create.
+
+The export carries your databases, not the server's own `mysql` database, where accounts, grants and time zone data live. If the dump or your queries change them, for example with `CREATE USER` or `GRANT`, seeding with sanitization stops before it builds anything, because those changes wouldn't make it into the image. Dumps made with `drush sql:dump` don't touch the `mysql` database.
+
+`seed.sh` doesn't change the dump file itself. If the dump mustn't leave production in the first place, sanitize it as you export it, for example with [Drush GDPR Dumper](https://github.com/robiningelbrecht/drush-gdpr-dumper) or [MTK](https://github.com/skpr/mtk).
 
 ## Forcing a database upgrade on start
 
@@ -111,6 +156,7 @@ tests/bats/node_modules/.bin/bats tests/bats --tap
 # Individual test files.
 tests/bats/node_modules/.bin/bats tests/bats/image.bats --tap
 tests/bats/node_modules/.bin/bats tests/bats/seed.bats --tap
+tests/bats/node_modules/.bin/bats tests/bats/helper.bats --tap
 ```
 
 ### Versioning

@@ -81,8 +81,7 @@ note() { printf "       %s\n" "${1}"; }
 [ -z "${DESTINATION_IMAGE}" ] && fail "Destination Docker image name must be provided as the second argument." && exit 1
 [ ! -f "${DB_FILE}" ] && fail "Specified database dump file ${DB_FILE} does not exist." && exit 1
 [ "${SANITIZE_PROCEED}" = "1" ] && [ ! -f "${SANITIZE_FILE}" ] && fail "Specified sanitization file ${SANITIZE_FILE} does not exist." && exit 1
-[ "${SANITIZE_PROCEED}" = "1" ] && [ "${DB_FILE}" -ef "${TMP_SANITIZED_DB_FILE}" ] && fail "Specified database dump file ${DB_FILE} would be overwritten by the sanitized export; rename it or set TMP_SANITIZED_DB_FILE." && exit 1
-[ "${SANITIZE_PROCEED}" = "1" ] && [ "${SANITIZE_FILE}" -ef "${TMP_SANITIZED_DB_FILE}" ] && fail "Specified sanitization file ${SANITIZE_FILE} would be overwritten by the sanitized export; rename it or set TMP_SANITIZED_DB_FILE." && exit 1
+[ "${SANITIZE_PROCEED}" = "1" ] && [ -e "${TMP_SANITIZED_DB_FILE}" ] && fail "Sanitized database export file ${TMP_SANITIZED_DB_FILE} already exists; remove it or set TMP_SANITIZED_DB_FILE to another path." && exit 1
 [ "${BASE_IMAGE##*/}" = "${BASE_IMAGE}" ] && fail "${BASE_IMAGE} should be in a format myorg/myimage." && exit 1
 [ "${DESTINATION_IMAGE##*/}" = "${DESTINATION_IMAGE}" ] && fail "${DESTINATION_IMAGE} should be in a format myorg/myimage." && exit 1
 
@@ -202,6 +201,11 @@ import_db() {
   assert_db_was_imported "${1}"
 }
 
+# Prints the checksum of 'mysql.global_priv', which holds database accounts.
+checksum_accounts() {
+  docker exec "${1}" /usr/bin/mysql --skip-column-names --batch -e "CHECKSUM TABLE mysql.global_priv;"
+}
+
 # Sets 'cid' to the ID of the started container.
 start_container() {
   task "Start container from the image ${1}"
@@ -280,7 +284,16 @@ import_file="${DB_FILE}"
 # log, so the queries run in another container whose export is imported.
 if [ "${SANITIZE_PROCEED}" = "1" ]; then
   start_container "${BASE_IMAGE}"
+  accounts_before_import="$(checksum_accounts "${cid}")"
   import_db "${cid}" "${DB_FILE}"
+  accounts_after_import="$(checksum_accounts "${cid}")"
+
+  # The export carries databases only, so accounts the dump creates or changes
+  # would be missing from the image.
+  if [ "${accounts_after_import}" != "${accounts_before_import}" ]; then
+    fail "The database dump creates or changes database accounts, which the sanitized export does not carry into the image; remove those statements from the dump."
+    exit 1
+  fi
 
   task "Sanitize database with queries from the ${SANITIZE_FILE} file."
   # The redirect fails on an unreadable file, so the step cannot pass without
@@ -299,9 +312,8 @@ if [ "${SANITIZE_PROCEED}" = "1" ]; then
     databases+=("${database}")
   done <<<"${database_names}"
 
-  # The export holds database contents, so it is recreated with owner-only
+  # The export holds database contents, so it is created with owner-only
   # permissions.
-  rm -f "${TMP_SANITIZED_DB_FILE}"
   if ! (umask 077 && docker exec "${cid}" /usr/bin/mysqldump --routines --events --hex-blob --databases "${databases[@]}" >"${TMP_SANITIZED_DB_FILE}"); then
     fail "Unable to export sanitized database to the ${TMP_SANITIZED_DB_FILE} file."
     exit 1

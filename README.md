@@ -123,7 +123,9 @@ TRUNCATE TABLE `sessions`;
 
 MariaDB keeps recent changes in its redo log, and the redo log is part of the data that `seed.sh` captures. Sanitizing the captured database in place would leave the original values readable in the image. So `seed.sh` imports the dump and runs your queries in a separate container, exports the result, and imports that export into the container it captures, which never holds the original values.
 
-The cost is time: the database is imported twice. The export also takes up disk space in the working directory while seeding runs; `seed.sh` removes it once it's imported, or when seeding fails.
+The cost is time: the database is imported twice. The export, `.db-sanitized.sql` in the working directory, also takes up disk space while seeding runs. `seed.sh` removes it once it's imported or when seeding fails, and won't start if a file already exists at that path, so it never deletes a file it didn't create.
+
+The export carries the databases, not the database accounts. If the dump creates or changes accounts, for example with `CREATE USER` or `GRANT`, seeding with sanitization stops before it builds anything, because those accounts wouldn't make it into the image. Dumps made with `drush sql:dump` don't contain accounts.
 
 `seed.sh` doesn't change the dump file itself. If the dump mustn't leave production in the first place, sanitize it as you export it, for example with [Drush GDPR Dumper](https://github.com/robiningelbrecht/drush-gdpr-dumper) or [MTK](https://github.com/skpr/mtk).
 

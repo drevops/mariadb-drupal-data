@@ -177,6 +177,15 @@ load _helper
   assert_success
   assert_output ""
 
+  step "Assert seeding stops before building the image when the dump changes database accounts."
+
+  cp "${file}" "${BUILD_DIR}/db-accounts.sql"
+  echo "CREATE USER 'extra'@'%' IDENTIFIED BY 'extra';" >>"${BUILD_DIR}/db-accounts.sql"
+  run ./seed.sh "${BUILD_DIR}/db-accounts.sql" "${destination_image}"
+  assert_failure
+  assert_output_contains "The database dump creates or changes database accounts, which the sanitized export does not carry into the image; remove those statements from the dump."
+  assert_output_not_contains "Stage 2: Build image"
+
   step "Assert seeding with sanitization works."
 
   run ./seed.sh "${file}" "${destination_image}"
@@ -276,6 +285,7 @@ seed_with_destination() {
 
   cp "${BATS_TEST_DIRNAME}/fixtures/db.sql" "${BUILD_DIR}/db.sql"
   cp "${BATS_TEST_DIRNAME}/fixtures/sanitize.sql" "${BUILD_DIR}/sanitize.sql"
+  echo "unrelated" >"${BUILD_DIR}/unrelated.sql"
 
   substep "Assert that a missing sanitization file stops seeding before any Docker call."
   run seed_with_sanitization "1" "${BUILD_DIR}/missing.sql" ""
@@ -295,15 +305,17 @@ seed_with_destination() {
     "1" "${BUILD_DIR}/missing.sql" "" "Specified sanitization file ${BUILD_DIR}/missing.sql does not exist."
     "1" "${BUILD_DIR}" "" "Specified sanitization file ${BUILD_DIR} does not exist."
     "0" "${BUILD_DIR}/missing.sql" "" "Sanitization: disabled; set SANITIZE_PROCEED=1 to sanitize the database before it is captured."
-    "1" "${BUILD_DIR}/sanitize.sql" "db.sql" "Specified database dump file ${BUILD_DIR}/db.sql would be overwritten by the sanitized export; rename it or set TMP_SANITIZED_DB_FILE."
-    "1" "sanitize.sql" "${BUILD_DIR}/sanitize.sql" "Specified sanitization file sanitize.sql would be overwritten by the sanitized export; rename it or set TMP_SANITIZED_DB_FILE."
-    "0" "sanitize.sql" "sanitize.sql" "Sanitization: disabled; set SANITIZE_PROCEED=1 to sanitize the database before it is captured."
+    "1" "${BUILD_DIR}/sanitize.sql" "db.sql" "Sanitized database export file db.sql already exists; remove it or set TMP_SANITIZED_DB_FILE to another path."
+    "1" "${BUILD_DIR}/sanitize.sql" "${BUILD_DIR}/sanitize.sql" "Sanitized database export file ${BUILD_DIR}/sanitize.sql already exists; remove it or set TMP_SANITIZED_DB_FILE to another path."
+    "1" "${BUILD_DIR}/sanitize.sql" "${BUILD_DIR}/unrelated.sql" "Sanitized database export file ${BUILD_DIR}/unrelated.sql already exists; remove it or set TMP_SANITIZED_DB_FILE to another path."
+    "0" "${BUILD_DIR}/sanitize.sql" "${BUILD_DIR}/unrelated.sql" "Sanitization: disabled; set SANITIZE_PROCEED=1 to sanitize the database before it is captured."
   )
   dataprovider_run "seed_with_sanitization" 4
 
-  substep "Assert that the input files were kept."
+  substep "Assert that existing files at the export path were kept."
   assert_file_exists "${BUILD_DIR}/db.sql"
   assert_file_exists "${BUILD_DIR}/sanitize.sql"
+  assert_file_contains "${BUILD_DIR}/unrelated.sql" "unrelated"
 }
 
 seed_with_sanitization() {
